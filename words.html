@@ -1,0 +1,1943 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vector Shapes Stacker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pathseg@1.2.1/pathseg.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/poly-decomp@0.3.0/build/decomp.min.js"></script>
+
+    <style>
+      /* Custom font and basic body styling */
+      body {
+        font-family: "Inter", sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background-color: #f0f4f8;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      /* Style the game container */
+      #game-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        max-width: 95vw;
+        max-height: 95vh;
+        width: 100%;
+        overflow-y: auto; /* Allow scrolling if content overflows */
+      }
+      /* Style the game canvas */
+      canvas {
+        display: block;
+        /* background-color: #e2e8f0; */ /* Removed default color */
+        border-radius: 8px;
+        max-width: 100%;
+        height: auto;
+        touch-action: none; /* Prevent default touch actions like scrolling */
+        cursor: grab; /* Indicate draggable items */
+        /* --- ADDED BACKGROUND IMAGE --- */
+        background-image: url("http://googleusercontent.com/image_generation_content/1");
+        background-size: cover; /* Adjust as needed (cover, contain, etc.) */
+        background-position: center;
+        background-repeat: no-repeat;
+      }
+      canvas:active {
+        cursor: grabbing;
+      }
+      /* Style UI elements */
+      #ui-elements {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      /* Style individual UI items */
+      .ui-item {
+        background-color: #4a5568;
+        color: white;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-align: center;
+        flex-grow: 1;
+        flex-basis: 0;
+        min-width: 70px;
+      }
+      /* Style the shape bin */
+      #shape-bin {
+        margin-top: 10px;
+        padding: 8px;
+        background-color: #edf2f7;
+        border-radius: 8px;
+        min-height: 50px;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 5px;
+        position: relative;
+      }
+      /* Style the message overlay */
+      #message-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.75);
+        color: white; /* Slightly darker */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.3rem; /* Slightly larger */
+        font-weight: bold;
+        text-align: center;
+        border-radius: 8px;
+        z-index: 10;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+        pointer-events: none;
+        padding: 15px; /* More padding */
+      }
+      #message-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      #sub-message-text {
+        font-size: 1rem;
+        margin-top: 8px;
+      } /* Slightly larger subtext */
+      /* Style the shapes in the bin */
+      .bin-shape {
+        width: 42px; /* Slightly wider for words */
+        height: 38px;
+        margin: 4px;
+        cursor: grab; /* Slightly larger */
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        border: 2px solid #4a5568;
+        border-radius: 4px;
+        font-size: 0.8rem; /* Smaller font size for words in bin */
+        font-weight: bold;
+        color: rgba(255, 255, 255, 0.95); /* White text */
+        overflow: hidden;
+        position: relative;
+        background-clip: padding-box; /* Ensure background respects border */
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.6); /* Text shadow for visibility */
+        line-height: 1.1;
+      }
+      .bin-shape:active {
+        cursor: grabbing;
+      }
+      /* Specific bin shape styles */
+      .bin-rect {
+        background-color: #f56565;
+      }
+      .bin-circle {
+        background-color: #48bb78;
+        border-radius: 50%;
+      }
+      .bin-poly {
+        background-color: #4299e1;
+        clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+      }
+      .bin-board {
+        background-color: #a0aec0;
+        height: 15px;
+        width: 45px;
+      }
+      .bin-ladder {
+        background-color: #ecc94b;
+        width: 20px;
+        height: 45px;
+      }
+      .bin-mug {
+        background-color: #f6ad55;
+        width: 30px;
+        height: 35px;
+        border-radius: 3px 3px 6px 6px;
+      }
+      .bin-star {
+        background-color: #dd6b20;
+        clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+      }
+      .bin-gear {
+        background-color: #718096;
+        border-radius: 50%;
+      }
+      .bin-lshape {
+        background-color: #9f7aea;
+      }
+      .bin-block {
+        background-color: #cbd5e0;
+        border: 1px dashed #a0aec0;
+      }
+      .bin-banana-shape {
+        background-color: #faf089;
+        border-radius: 50% / 70%;
+      }
+      .bin-shoe {
+        background-color: #718096;
+        border-radius: 10px 3px 3px 10px;
+      }
+      .bin-wine-glass {
+        background-color: #bee3f8;
+      }
+      .bin-book {
+        background-color: #9ae6b4;
+      }
+      .bin-pizza {
+        background-color: #fed7d7;
+        clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+      }
+      .bin-donut {
+        background-color: #fbd38d;
+        border-radius: 50%;
+        border: 8px solid #ed8936;
+      }
+      .bin-plus {
+        background-color: #667eea;
+      }
+      .bin-tshape {
+        background-color: #ed64a6;
+      }
+      .bin-arrow {
+        background-color: #a0aec0;
+      }
+
+      /* --- NEW / MODIFIED BIN STYLES --- */
+      .bin-word-cia {
+        background-color: #dc2626; /* Red */
+      }
+      .bin-word-csu {
+        background-color: #2563eb; /* Blue */
+      }
+      .bin-word-ai {
+        background-color: #f59e0b; /* Amber */
+      }
+      .bin-helmet {
+        background-color: #8d5b2a; /* Brownish Bronze */
+      } /* Style for Spartan Helmet bin item */
+      .bin-muffin {
+        background-color: #a0522d;
+        border-radius: 50% 50% 10px 10px;
+      } /* Style for Muffin bin item */
+
+      /* Instructions Block */
+      #instructions {
+        margin-top: 15px;
+        padding: 10px 15px;
+        background-color: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        width: 100%;
+        font-size: 0.8rem;
+        color: #4a5568;
+      }
+      #instructions h4 {
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: #2d3748;
+      }
+      #instructions ul {
+        list-style: disc;
+        margin-left: 20px;
+      }
+      #instructions li {
+        margin-bottom: 3px;
+      }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="game-container">
+      <div id="ui-elements">
+        <div id="timer" class="ui-item">Time: 60</div>
+        <div id="height-display" class="ui-item">Max Height: 0</div>
+        <div id="score-display" class="ui-item">Score: 0</div>
+        <div id="level-display" class="ui-item">Level: 1</div>
+      </div>
+
+      <div style="position: relative; width: 100%" id="canvas-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="message-overlay">
+          <span id="message-text">Tap/Click to Start</span>
+          <span id="sub-message-text"></span>
+        </div>
+      </div>
+
+      <div id="shape-bin">
+        <span id="bin-placeholder" class="text-gray-500">Shape Bin</span>
+      </div>
+
+      <div id="instructions">
+        <h4>How to Play:</h4>
+        <ul>
+          <li>Drag shapes from the bin and drop them onto the play area.</li>
+          <li>Stack shapes as high as possible on the ground or platforms.</li>
+          <li>Reach the target height for the level before the timer runs out.</li>
+          <li>Collect bananas (🍌) by touching them with placed shapes for bonus points!</li>
+          <li>Avoid dropping shapes into the water (💧) at the bottom.</li>
+          <li>The bin refills when your stack is stable.</li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      // --- Matter.js Module Aliases ---
+      const {
+        Engine,
+        Render,
+        Runner,
+        World,
+        Bodies,
+        Body,
+        Events,
+        Composite,
+        Composites,
+        Mouse,
+        MouseConstraint,
+        Vector,
+        Vertices,
+      } = Matter;
+
+      // --- DOM Elements ---
+      const gameContainer = document.getElementById("game-container");
+      const canvasContainer = document.getElementById("canvas-container");
+      const canvas = document.getElementById("game-canvas");
+      const timerDisplay = document.getElementById("timer");
+      const heightDisplay = document.getElementById("height-display");
+      const scoreDisplay = document.getElementById("score-display");
+      const levelDisplay = document.getElementById("level-display");
+      const shapeBin = document.getElementById("shape-bin");
+      const binPlaceholder = document.getElementById("bin-placeholder");
+      const messageOverlay = document.getElementById("message-overlay");
+      const messageText = document.getElementById("message-text");
+      const subMessageText = document.getElementById("sub-message-text");
+
+      // --- Game Configuration ---
+      let CANVAS_WIDTH = Math.min(window.innerWidth * 0.9, 550);
+      let CANVAS_HEIGHT = Math.min(window.innerHeight * 0.5, 400);
+      const GROUND_HEIGHT = 30;
+      const WATER_HEIGHT = 15;
+      const STABILITY_THRESHOLD = 0.25;
+      const STABILITY_CHECK_INTERVAL = 1000;
+      const SHAPE_SPAWN_Y = 40;
+      const LEVEL_TIME = 60;
+      const REQUIRED_HEIGHT_PER_LEVEL_BASE = 100;
+      const REQUIRED_HEIGHT_PER_LEVEL_INCREMENT = 20;
+      const BANANA_SCORE = 100; // Score points for bananas
+      const SHAPE_SCORE = 10; // Score points for placing a shape successfully (optional)
+      const COLLISION_SOUND_THRESHOLD = 1.5;
+      let waterBody = null;
+
+      // --- Game State ---
+      let engine, render, runner, world, mouseConstraint;
+      let currentDraggingShape = null,
+        currentDraggingBody = null,
+        isDraggingFromBin = false;
+      let canPlaceShape = true,
+        stabilityCheckTimeout,
+        gameTimerInterval;
+      let timeLeft = LEVEL_TIME,
+        currentMaxHeight = 0,
+        score = 0,
+        level = 1;
+      let gameState = "PRE_START";
+      let activeBodies = [],
+        platformBodies = [],
+        bananaBodies = [];
+      let audioStarted = false;
+      let animationFrameId;
+
+      // --- Sound Effects Setup (Tone.js) ---
+      // (Sound setup code remains the same)
+      let placeSound, bananaSound, waterSound, levelUpSound, gameOverSound, collisionSynth;
+      function setupSounds() {
+        placeSound = new Tone.Synth({
+          oscillator: { type: "sine" },
+          envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 },
+        }).toDestination();
+        bananaSound = new Tone.Synth({
+          oscillator: { type: "triangle" },
+          envelope: { attack: 0.01, decay: 0.2, sustain: 0.05, release: 0.1 },
+          volume: -6,
+        }).toDestination();
+        waterSound = new Tone.NoiseSynth({
+          noise: { type: "white" },
+          envelope: { attack: 0.01, decay: 0.15, sustain: 0, release: 0.1 },
+          volume: -10,
+        }).toDestination();
+        levelUpSound = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: "square" },
+          envelope: { attack: 0.02, decay: 0.1, sustain: 0.2, release: 0.3 },
+          volume: -8,
+        }).toDestination();
+        gameOverSound = new Tone.Synth({
+          oscillator: { type: "sawtooth" },
+          envelope: { attack: 0.05, decay: 0.3, sustain: 0.1, release: 0.5 },
+          volume: -5,
+        }).toDestination();
+        collisionSynth = new Tone.MembraneSynth({
+          pitchDecay: 0.01,
+          octaves: 3,
+          envelope: { attack: 0.001, decay: 0.1, sustain: 0.01, release: 0.1 },
+          volume: -15,
+        }).toDestination();
+      }
+      setupSounds();
+      async function startAudioContext() {
+        if (!audioStarted) {
+          await Tone.start();
+          audioStarted = true;
+          console.log("Audio context started!");
+        }
+      }
+
+      // --- Shape Vertex Data ---
+      // Vertices for Spartan Helmet (approximate) - relative to 0,0
+      const helmetVertices = Vertices.clockwiseSort(
+        Vertices.fromPath(
+          "M 0 -20 C -15 -20 -20 -5 -20 5 L -18 15 L 18 15 L 20 5 C 20 -5 15 -20 0 -20 Z M -5 -5 L 5 -5 L 0 -15 Z"
+        )
+      );
+
+      // --- Shape Definitions (Updated) ---
+      const shapeTypes = [
+        // Original & Modified (excluding letters)
+        { type: "rectangle", width: 35, height: 35, color: "#f56565", binClass: "bin-rect", label: "playerShape" },
+        { type: "circle", radius: 18, color: "#48bb78", binClass: "bin-circle", label: "playerShape" },
+        { type: "rectangle", width: 55, height: 18, color: "#63b3ed", binClass: "bin-rect", label: "playerShape" },
+        { type: "polygon", sides: 3, radius: 22, color: "#f6e05e", binClass: "bin-poly", label: "playerShape" },
+        { type: "polygon", sides: 5, radius: 18, color: "#b794f4", binClass: "bin-poly", label: "playerShape" },
+        { type: "rectangle", width: 80, height: 10, color: "#a0aec0", binClass: "bin-board", label: "board" },
+        { type: "rectangle", width: 15, height: 60, color: "#ecc94b", binClass: "bin-ladder", label: "ladder" },
+        { type: "rectangle", width: 25, height: 30, color: "#f6ad55", binClass: "bin-mug", label: "mug" },
+        { type: "polygon", sides: 5, radius: 20, color: "#dd6b20", binClass: "bin-star", label: "star" },
+        { type: "circle", radius: 20, color: "#718096", binClass: "bin-gear", label: "gear" },
+        { type: "rectangle", width: 40, height: 40, color: "#9f7aea", binClass: "bin-lshape", label: "lshape" },
+        { type: "rectangle", width: 45, height: 25, color: "#cbd5e0", binClass: "bin-block", label: "block" },
+        {
+          type: "rectangle",
+          width: 40,
+          height: 15,
+          color: "#faf089",
+          binClass: "bin-banana-shape",
+          label: "bananaShape",
+        },
+        { type: "rectangle", width: 50, height: 20, color: "#718096", binClass: "bin-shoe", label: "shoe" },
+        { type: "rectangle", width: 25, height: 45, color: "#bee3f8", binClass: "bin-wine-glass", label: "wineGlass" },
+        { type: "rectangle", width: 30, height: 40, color: "#9ae6b4", binClass: "bin-book", label: "book" },
+        { type: "polygon", sides: 3, radius: 25, color: "#fed7d7", binClass: "bin-pizza", label: "pizza" },
+        { type: "circle", radius: 20, color: "#fbd38d", binClass: "bin-donut", label: "donut" },
+        { type: "rectangle", width: 40, height: 10, color: "#667eea", binClass: "bin-plus", label: "plus_h" },
+        { type: "rectangle", width: 10, height: 40, color: "#667eea", binClass: "bin-plus", label: "plus_v" },
+        { type: "rectangle", width: 40, height: 10, color: "#ed64a6", binClass: "bin-tshape", label: "tshape_h" },
+        { type: "rectangle", width: 10, height: 30, color: "#ed64a6", binClass: "bin-tshape", label: "tshape_v" },
+        { type: "rectangle", width: 30, height: 10, color: "#a0aec0", binClass: "bin-arrow", label: "arrow_shaft" },
+        { type: "polygon", sides: 3, radius: 10, color: "#a0aec0", binClass: "bin-arrow", label: "arrow_head" },
+
+        // --- Word Objects ---
+        {
+          type: "rectangle",
+          width: 70,
+          height: 25,
+          color: "#DC2626",
+          binClass: "bin-word-cia",
+          label: "wordCIA",
+          word: "CIA",
+        },
+        {
+          type: "rectangle",
+          width: 70,
+          height: 25,
+          color: "#2563EB",
+          binClass: "bin-word-csu",
+          label: "wordCSU",
+          word: "CSU",
+        },
+        {
+          type: "rectangle",
+          width: 50,
+          height: 25,
+          color: "#F59E0B",
+          binClass: "bin-word-ai",
+          label: "wordAI",
+          word: "AI",
+        },
+
+        // --- Spartan Helmet ---
+        {
+          type: "vertices",
+          vertices: helmetVertices,
+          color: "#8D5B2A",
+          binClass: "bin-helmet",
+          label: "helmet",
+          width: 40,
+          height: 40,
+        }, // Added approx width/height
+
+        // --- Muffin ---
+        { type: "circle", radius: 18, color: "#A0522D", binClass: "bin-muffin", label: "muffin" }, // Physics is a circle
+      ];
+
+      // Filter out partial composite shapes and ensure all placeable items are included
+      const placeableShapeTypes = shapeTypes.filter(
+        (s) => !["plus_h", "plus_v", "tshape_h", "tshape_v", "arrow_shaft", "arrow_head"].includes(s.label)
+      );
+
+      // --- Initialization ---
+      function init() {
+        if (typeof decomp !== "undefined") {
+          Matter.Common.setDecomp(decomp);
+          console.log("Using poly-decomp library.");
+        } else {
+          console.warn("poly-decomp.js not loaded. Complex concave shapes might not behave correctly.");
+        }
+
+        updateCanvasSize();
+        engine = Engine.create({ enableSleeping: true });
+        world = engine.world;
+        engine.gravity.y = 0.8;
+        render = Render.create({
+          canvas: canvas,
+          engine: engine,
+          options: {
+            width: CANVAS_WIDTH,
+            height: CANVAS_HEIGHT,
+            wireframes: false,
+            background: "transparent", // Set render background to transparent
+          },
+        });
+        runner = Runner.create();
+        createLevelBoundaries();
+        createLevelPlatforms(level);
+        const mouse = Mouse.create(render.canvas);
+        mouseConstraint = MouseConstraint.create(engine, {
+          mouse: mouse,
+          constraint: { stiffness: 0.2, render: { visible: false } },
+        });
+        mouseConstraint.collisionFilter.mask = 0;
+        World.add(world, mouseConstraint);
+        render.mouse = mouse;
+        resetGameVariables();
+        populateShapeBin();
+        showMessage("Tap/Click to Start");
+        Runner.run(runner, engine);
+        Render.run(render);
+        setupEventListeners();
+        requestAnimationFrame(gameLoop);
+      }
+
+      // --- Canvas Size Update ---
+      // (Remains the same)
+      function updateCanvasSize() {
+        const containerWidth = canvasContainer.offsetWidth;
+        CANVAS_WIDTH = Math.min(containerWidth, 550);
+        CANVAS_HEIGHT = Math.min(window.innerHeight * 0.5, 400);
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+        if (render) {
+          render.options.width = CANVAS_WIDTH;
+          render.options.height = CANVAS_HEIGHT;
+          Render.setPixelRatio(render, window.devicePixelRatio || 1);
+        }
+      }
+
+      // --- World Creation Functions ---
+      // (createLevelBoundaries remains the same)
+      function createLevelBoundaries() {
+        Composite.allBodies(world).forEach((body) => {
+          if (["ground", "wall", "water"].includes(body.label)) {
+            World.remove(world, body);
+          }
+        });
+        const ground = Bodies.rectangle(
+          CANVAS_WIDTH / 2,
+          CANVAS_HEIGHT - GROUND_HEIGHT / 2,
+          CANVAS_WIDTH,
+          GROUND_HEIGHT,
+          { isStatic: true, label: "ground", render: { fillStyle: "#718096", strokeStyle: "#2d3748", lineWidth: 2 } }
+        );
+        const leftWall = Bodies.rectangle(-5, CANVAS_HEIGHT / 2, 10, CANVAS_HEIGHT, {
+          isStatic: true,
+          label: "wall",
+          render: { visible: false },
+        });
+        const rightWall = Bodies.rectangle(CANVAS_WIDTH + 5, CANVAS_HEIGHT / 2, 10, CANVAS_HEIGHT, {
+          isStatic: true,
+          label: "wall",
+          render: { visible: false },
+        });
+        waterBody = Bodies.rectangle(
+          CANVAS_WIDTH / 2,
+          CANVAS_HEIGHT - GROUND_HEIGHT - WATER_HEIGHT / 2,
+          CANVAS_WIDTH,
+          WATER_HEIGHT,
+          { isStatic: true, isSensor: true, label: "water", render: { visible: false } }
+        );
+        World.add(world, [ground, leftWall, rightWall, waterBody]);
+      }
+      // (createLevelPlatforms remains the same)
+      function createLevelPlatforms(currentLevel) {
+        [...platformBodies, ...bananaBodies].forEach((body) => World.remove(world, body));
+        platformBodies = [];
+        bananaBodies = [];
+        const platformOptions = {
+          isStatic: true,
+          label: "platform",
+          render: { fillStyle: "#a0aec0", strokeStyle: "#4a5568", lineWidth: 1 },
+          friction: 0.6,
+        };
+        const bananaOptions = { isStatic: true, isSensor: true, label: "banana", render: { visible: false } };
+        const bananaRadius = 8;
+        const numPlatforms = Math.min(2 + Math.floor(currentLevel / 2), 5);
+        const minY = CANVAS_HEIGHT * 0.3;
+        const maxY = CANVAS_HEIGHT * 0.8;
+        const minWidth = 60;
+        const maxWidth = 120;
+        const platformHeight = 15;
+        for (let i = 0; i < numPlatforms; i++) {
+          let placed = false;
+          let attempts = 0;
+          while (!placed && attempts < 20) {
+            const width = minWidth + Math.random() * (maxWidth - minWidth);
+            const x = width / 2 + Math.random() * (CANVAS_WIDTH - width);
+            const y = minY + Math.random() * (maxY - minY);
+            let overlaps = false;
+            platformBodies.forEach((p) => {
+              if (
+                Math.abs(x - p.position.x) < width / 2 + p.width / 2 + 20 &&
+                Math.abs(y - p.position.y) < platformHeight / 2 + p.height / 2 + 30
+              ) {
+                overlaps = true;
+              }
+            });
+            if (!overlaps) {
+              const plat = Bodies.rectangle(x, y, width, platformHeight, platformOptions);
+              platformBodies.push(plat);
+              if (Math.random() < 0.4 + currentLevel * 0.1) {
+                const banana = Bodies.circle(
+                  x + (Math.random() - 0.5) * (width * 0.4),
+                  y - platformHeight / 2 - bananaRadius - 3,
+                  bananaRadius,
+                  bananaOptions
+                );
+                banana.collisionFilter.mask = 0;
+                bananaBodies.push(banana);
+              }
+              placed = true;
+            }
+            attempts++;
+          }
+        }
+        World.add(world, [...platformBodies, ...bananaBodies]);
+      }
+
+      // --- Game State Management ---
+      // (startGame, resetGameVariables, resetLevel, nextLevel, gameOver remain the same)
+      function startGame() {
+        if (gameState === "PLAYING") return;
+        startAudioContext();
+        console.log("Starting Game/Level", level);
+        gameState = "PLAYING";
+        hideMessage();
+        resetLevel();
+        createLevelPlatforms(level);
+        startTimer();
+        canPlaceShape = true;
+        populateShapeBin();
+        scheduleStabilityCheck();
+      }
+      function resetGameVariables() {
+        level = 1;
+        score = 0;
+        currentMaxHeight = 0;
+        updateScoreDisplay();
+        updateHeightDisplay();
+        updateLevelDisplay();
+      }
+      function resetLevel() {
+        activeBodies.forEach((body) => World.remove(world, body));
+        activeBodies = [];
+        timeLeft = LEVEL_TIME;
+        currentMaxHeight = 0;
+        updateTimerDisplay();
+        updateHeightDisplay();
+        updateScoreDisplay();
+        updateLevelDisplay();
+        canPlaceShape = true;
+        clearTimeout(stabilityCheckTimeout);
+        clearInterval(gameTimerInterval);
+      }
+      function nextLevel() {
+        level++;
+        gameState = "LEVEL_COMPLETE";
+        levelUpSound.triggerAttackRelease(["C4", "E4", "G4", "C5"], "0.5");
+        showMessage(`Level ${level - 1} Complete!`, `Starting Level ${level}... Score: ${score}`);
+        clearTimeout(stabilityCheckTimeout);
+        clearInterval(gameTimerInterval);
+        setTimeout(() => {
+          startGame();
+        }, 2500);
+      }
+      function gameOver(reason = "Time's up!") {
+        gameState = "GAME_OVER";
+        const finalHeight = calculateMaxHeight();
+        gameOverSound.triggerAttackRelease("C3", "1");
+        showMessage("Game Over!", `${reason} Score: ${score} | Max Height: ${Math.round(finalHeight)}`);
+        clearTimeout(stabilityCheckTimeout);
+        clearInterval(gameTimerInterval);
+        canPlaceShape = false;
+        setTimeout(() => {
+          messageText.textContent = "Game Over!";
+          subMessageText.textContent = `${reason} Score: ${score} | Max Height: ${Math.round(
+            finalHeight
+          )}. Tap/Click to Restart.`;
+          gameState = "POST_GAME";
+        }, 1500);
+      }
+
+      // --- Timer ---
+      // (Remains the same)
+      function startTimer() {
+        clearInterval(gameTimerInterval);
+        timeLeft = LEVEL_TIME;
+        updateTimerDisplay();
+        gameTimerInterval = setInterval(() => {
+          if (gameState !== "PLAYING") {
+            clearInterval(gameTimerInterval);
+            return;
+          }
+          timeLeft--;
+          updateTimerDisplay();
+          if (timeLeft <= 0) {
+            clearInterval(gameTimerInterval);
+            checkLevelEnd();
+          }
+        }, 1000);
+      }
+      function updateTimerDisplay() {
+        timerDisplay.textContent = `Time: ${timeLeft}`;
+      }
+
+      // --- Height & Score Calculation/Display ---
+      // (calculateMaxHeight, updateHeightDisplay, updateLevelDisplay remain the same)
+      function calculateMaxHeight() {
+        let maxHeight = 0;
+        if (activeBodies.length === 0) return 0;
+        activeBodies.forEach((body) => {
+          const bodyTopY = body.bounds.min.y;
+          if (bodyTopY < CANVAS_HEIGHT - GROUND_HEIGHT) {
+            const height = CANVAS_HEIGHT - GROUND_HEIGHT - bodyTopY;
+            if (height > maxHeight) maxHeight = height;
+          }
+        });
+        return maxHeight;
+      }
+      function updateHeightDisplay() {
+        heightDisplay.textContent = `Max Height: ${Math.round(currentMaxHeight)}`;
+      }
+      function updateLevelDisplay() {
+        levelDisplay.textContent = `Level: ${level}`;
+      }
+      // Update score display function
+      function updateScoreDisplay() {
+        scoreDisplay.textContent = `Score: ${score}`;
+        // console.log(`Score updated: ${score}`); // For debugging
+      }
+
+      // --- Stability Check ---
+      // (Remains the same)
+      function checkStability() {
+        if (gameState !== "PLAYING") {
+          scheduleStabilityCheck();
+          return;
+        }
+        if (activeBodies.length === 0) {
+          if (!canPlaceShape) {
+            canPlaceShape = true;
+            populateShapeBin();
+          }
+          scheduleStabilityCheck();
+          return;
+        }
+        let totalSpeed = 0;
+        activeBodies.forEach((body) => {
+          totalSpeed += Matter.Vector.magnitude(body.velocity) + Math.abs(body.angularVelocity);
+        });
+        const averageSpeed = totalSpeed / activeBodies.length;
+        if (averageSpeed < STABILITY_THRESHOLD) {
+          if (!canPlaceShape) {
+            console.log("Stack stable, enabling shape placement.");
+            canPlaceShape = true;
+            populateShapeBin();
+          }
+        } else {
+          if (canPlaceShape) {
+            console.log("Stack unstable, disabling shape placement.");
+            canPlaceShape = false;
+            clearShapeBin();
+            binPlaceholder.textContent = "Waiting...";
+          }
+        }
+        scheduleStabilityCheck();
+      }
+      function scheduleStabilityCheck() {
+        clearTimeout(stabilityCheckTimeout);
+        if (gameState === "PLAYING" || gameState === "LEVEL_COMPLETE") {
+          stabilityCheckTimeout = setTimeout(checkStability, STABILITY_CHECK_INTERVAL);
+        }
+      }
+
+      // --- Shape Bin Logic ---
+      // (Populate function updated for new word shapes)
+      function populateShapeBin() {
+        if (!canPlaceShape || shapeBin.querySelector(".bin-shape")) {
+          if (!canPlaceShape && gameState === "PLAYING") binPlaceholder.textContent = "Waiting...";
+          else if (shapeBin.querySelector(".bin-shape")) binPlaceholder.textContent = "";
+          else if (gameState !== "PLAYING" && gameState !== "POST_GAME") binPlaceholder.textContent = "Shape Bin";
+          return;
+        }
+        clearShapeBin();
+        binPlaceholder.textContent = "";
+
+        const randomShapeData = placeableShapeTypes[Math.floor(Math.random() * placeableShapeTypes.length)];
+        const shapeElement = document.createElement("div");
+        shapeElement.classList.add("bin-shape", randomShapeData.binClass);
+
+        // Add text for word shapes in the bin
+        if (randomShapeData.word) {
+          shapeElement.textContent = randomShapeData.word;
+        } else if (randomShapeData.label === "helmet") {
+          shapeElement.innerHTML = "&#x1F3A9;"; // Helmet emoji (example) or use SVG/icon font
+          shapeElement.style.fontSize = "1.5rem"; // Adjust emoji size
+        } else if (randomShapeData.label === "muffin") {
+          shapeElement.innerHTML = "&#x1F9C1;"; // Muffin emoji
+          shapeElement.style.fontSize = "1.5rem"; // Adjust emoji size
+        }
+
+        shapeElement.dataset.shapeInfo = JSON.stringify(randomShapeData);
+        shapeElement.draggable = true;
+
+        shapeElement.addEventListener("dragstart", (e) => {
+          /* ... same as before ... */
+          startAudioContext();
+          if (!canPlaceShape || gameState !== "PLAYING") {
+            e.preventDefault();
+            return;
+          }
+          isDraggingFromBin = true;
+          currentDraggingShape = randomShapeData;
+          try {
+            e.dataTransfer.setData("text/plain", JSON.stringify(randomShapeData));
+            e.dataTransfer.effectAllowed = "copy";
+          } catch (err) {}
+        });
+        shapeElement.addEventListener(
+          "touchstart",
+          (e) => {
+            /* ... same as before ... */
+            startAudioContext();
+            if (!canPlaceShape || gameState !== "PLAYING") {
+              return;
+            }
+            e.preventDefault();
+            isDraggingFromBin = true;
+            currentDraggingShape = randomShapeData;
+            const clone = shapeElement.cloneNode(true);
+            clone.style.position = "absolute";
+            clone.style.opacity = "0.7";
+            clone.style.pointerEvents = "none";
+            clone.style.zIndex = "1000";
+            const touch = e.touches[0];
+            clone.style.left = `${touch.clientX - clone.offsetWidth / 2}px`;
+            clone.style.top = `${touch.clientY - clone.offsetHeight / 2}px`;
+            document.body.appendChild(clone);
+            currentDraggingBody = clone;
+            const touchMoveHandler = (moveEvent) => {
+              if (!currentDraggingBody) return;
+              const touch = moveEvent.touches[0];
+              currentDraggingBody.style.left = `${touch.clientX - currentDraggingBody.offsetWidth / 2}px`;
+              currentDraggingBody.style.top = `${touch.clientY - currentDraggingBody.offsetHeight / 2}px`;
+            };
+            const touchEndHandler = (endEvent) => {
+              document.removeEventListener("touchmove", touchMoveHandler);
+              document.removeEventListener("touchend", touchEndHandler);
+              if (currentDraggingBody) {
+                document.body.removeChild(currentDraggingBody);
+              }
+              if (currentDraggingShape) {
+                const touch = endEvent.changedTouches[0];
+                const canvasRect = canvas.getBoundingClientRect();
+                const dropX = touch.clientX - canvasRect.left;
+                const dropY = touch.clientY - canvasRect.top;
+                if (
+                  dropX > 0 &&
+                  dropX < CANVAS_WIDTH &&
+                  dropY > 0 &&
+                  dropY < CANVAS_HEIGHT - GROUND_HEIGHT - WATER_HEIGHT
+                ) {
+                  placeShape(dropX, SHAPE_SPAWN_Y, currentDraggingShape);
+                } else {
+                  if (!shapeBin.querySelector(".bin-shape")) {
+                    populateShapeBin();
+                  }
+                }
+              }
+              isDraggingFromBin = false;
+              currentDraggingShape = null;
+              currentDraggingBody = null;
+            };
+            document.addEventListener("touchmove", touchMoveHandler, { passive: false });
+            document.addEventListener("touchend", touchEndHandler);
+          },
+          { passive: false }
+        );
+
+        shapeBin.appendChild(shapeElement);
+      }
+      // (clearShapeBin remains the same)
+      function clearShapeBin() {
+        shapeBin.innerHTML = "";
+        shapeBin.appendChild(binPlaceholder);
+        if (canPlaceShape || gameState !== "PLAYING") {
+          binPlaceholder.textContent = "Shape Bin";
+        } else {
+          binPlaceholder.textContent = "Waiting...";
+        }
+      }
+
+      // --- Placing Shapes (Updated for new types) ---
+      function placeShape(x, y, shapeData) {
+        if (!canPlaceShape || gameState !== "PLAYING") return;
+        let newBody;
+        const customDrawLabels = [
+          // Updated list
+          "ladder",
+          "mug",
+          "star",
+          "gear",
+          "lshape",
+          "block",
+          "bananaShape",
+          "shoe",
+          "wineGlass",
+          "book",
+          "pizza",
+          "donut",
+          "plus",
+          "tshape",
+          "arrow",
+          "wordCIA",
+          "wordCSU",
+          "wordAI",
+          "helmet",
+          "muffin", // Added new labels
+        ];
+        const isCustomRender = customDrawLabels.includes(shapeData.label);
+        const options = {
+          restitution: 0.4,
+          friction: 0.5,
+          density: 0.0015,
+          label: shapeData.label || "playerShape",
+          render: { fillStyle: shapeData.color, visible: !isCustomRender }, // Hide default render for custom ones
+        };
+
+        const halfWidth = shapeData.width
+          ? shapeData.width / 2
+          : shapeData.radius || (shapeData.type === "vertices" ? 20 : 18); // Estimate width better
+        const safeX = Math.max(halfWidth + 5, Math.min(CANVAS_WIDTH - halfWidth - 5, x));
+        const safeY = SHAPE_SPAWN_Y;
+
+        // Handle Composite Shapes first
+        if (shapeData.label === "plus_h") {
+          /* ... same as before ... */
+          const plusH = shapeTypes.find((s) => s.label === "plus_h");
+          const plusV = shapeTypes.find((s) => s.label === "plus_v");
+          const horizontal = Bodies.rectangle(0, 0, plusH.width, plusH.height);
+          const vertical = Bodies.rectangle(0, 0, plusV.width, plusV.height);
+          newBody = Body.create({
+            parts: [horizontal, vertical],
+            label: "plus",
+            render: { visible: false },
+            restitution: options.restitution,
+            friction: options.friction,
+            density: options.density,
+          });
+          Body.setPosition(newBody, { x: safeX, y: safeY });
+        } else if (shapeData.label === "tshape_h") {
+          /* ... same as before ... */
+          const tH = shapeTypes.find((s) => s.label === "tshape_h");
+          const tV = shapeTypes.find((s) => s.label === "tshape_v");
+          const topBar = Bodies.rectangle(0, -tV.height / 2 + tH.height / 2, tH.width, tH.height);
+          const stem = Bodies.rectangle(0, tH.height / 2, tV.width, tV.height);
+          newBody = Body.create({
+            parts: [topBar, stem],
+            label: "tshape",
+            render: { visible: false },
+            restitution: options.restitution,
+            friction: options.friction,
+            density: options.density,
+          });
+          Body.setPosition(newBody, { x: safeX, y: safeY });
+        } else if (shapeData.label === "arrow_shaft") {
+          /* ... same as before ... */
+          const shaftData = shapeTypes.find((s) => s.label === "arrow_shaft");
+          const headData = shapeTypes.find((s) => s.label === "arrow_head");
+          const shaft = Bodies.rectangle(-headData.radius / 2, 0, shaftData.width, shaftData.height);
+          const head = Bodies.polygon(shaftData.width / 2, 0, headData.sides, headData.radius);
+          newBody = Body.create({
+            parts: [shaft, head],
+            label: "arrow",
+            render: { visible: false },
+            restitution: options.restitution,
+            friction: options.friction,
+            density: options.density,
+          });
+          Body.setPosition(newBody, { x: safeX, y: safeY });
+        } else {
+          // Handle simple, vertex, and new shapes
+          switch (shapeData.type) {
+            case "rectangle":
+              newBody = Bodies.rectangle(safeX, safeY, shapeData.width, shapeData.height, options);
+              break;
+            case "circle":
+              newBody = Bodies.circle(safeX, safeY, shapeData.radius, options);
+              break;
+            case "polygon":
+              const sides = Math.max(3, shapeData.sides || 3);
+              newBody = Bodies.polygon(safeX, safeY, sides, shapeData.radius, options);
+              break;
+            case "vertices":
+              const clonedVertices = shapeData.vertices.map((v) => ({ ...v }));
+              newBody = Bodies.fromVertices(safeX, safeY, [clonedVertices], options);
+              if (!newBody) {
+                console.error("Failed to create body from vertices:", shapeData.label);
+                return;
+              }
+              break;
+            default:
+              console.error("Unknown shape type:", shapeData.type);
+              return;
+          }
+        }
+
+        if (!newBody) {
+          console.error("Failed to create body for shape:", shapeData);
+          return;
+        }
+
+        Body.setVelocity(newBody, { x: (Math.random() - 0.5) * 0.5, y: 1 });
+        Body.setAngularVelocity(newBody, (Math.random() - 0.5) * 0.03);
+        World.add(world, newBody);
+        activeBodies.push(newBody);
+
+        // Add score for placing a shape (optional)
+        score += SHAPE_SCORE;
+        updateScoreDisplay();
+
+        placeSound.triggerAttackRelease("C4", "8n");
+        canPlaceShape = false;
+        clearShapeBin();
+        binPlaceholder.textContent = "Waiting...";
+        scheduleStabilityCheck();
+        isDraggingFromBin = false;
+        currentDraggingShape = null;
+      }
+
+      // --- Custom Drawing Functions ---
+      // (Keep existing: drawLadder, drawMug, drawBanana (collectible), drawStar, drawGear, drawLShape, drawConcreteBlock, drawBananaShape, drawShoe, drawWineGlass, drawBook, drawPizzaSlice, drawDonut, drawPlus, drawTShape, drawArrow)
+      // ... (All previous draw functions remain here) ...
+      function drawLadder(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "ladder");
+        const width = shapeDef ? shapeDef.width : 15;
+        const height = shapeDef ? shapeDef.height : 60;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        const railOffset = width / 2;
+        const rungCount = 5;
+        const rungSpacing = height / (rungCount + 1);
+        ctx.strokeStyle = "#8B4513";
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(-railOffset, -height / 2);
+        ctx.lineTo(-railOffset, height / 2);
+        ctx.moveTo(railOffset, -height / 2);
+        ctx.lineTo(railOffset, height / 2);
+        ctx.stroke();
+        ctx.beginPath();
+        for (let i = 1; i <= rungCount; i++) {
+          const y = -height / 2 + i * rungSpacing;
+          ctx.moveTo(-railOffset, y);
+          ctx.lineTo(railOffset, y);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+      function drawMug(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "mug");
+        const width = shapeDef ? shapeDef.width : 25;
+        const height = shapeDef ? shapeDef.height : 30;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = "#f6ad55";
+        ctx.strokeStyle = "#D97706";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.rect(-width / 2, -height / 2, width, height);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.strokeStyle = "#D97706";
+        ctx.lineWidth = 4;
+        ctx.arc(width / 2, 0, height * 0.25, -Math.PI / 2.5, Math.PI / 2.5);
+        ctx.stroke();
+        ctx.restore();
+      }
+      function drawBanana(ctx, body) {
+        /* Collectible */ const pos = body.position;
+        const radius = body.circleRadius || 8;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.fillStyle = "#f6e05e";
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, Math.PI * 0.8, Math.PI * 1.8);
+        ctx.quadraticCurveTo(radius * 0.5, radius * 0.8, 0, radius);
+        ctx.quadraticCurveTo(
+          -radius * 0.5,
+          radius * 0.8,
+          -radius * Math.cos(Math.PI * 0.2),
+          radius * Math.sin(Math.PI * 0.2)
+        );
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(radius * 0.3, -radius * 0.4, radius * 0.1, 0, Math.PI * 2);
+        ctx.fillStyle = "#A0522D";
+        ctx.fill();
+        ctx.restore();
+      }
+      function drawStar(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "star");
+        const radius = shapeDef ? shapeDef.radius : 20;
+        const points = 5;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(0, -radius);
+        for (let i = 0; i < points * 2; i++) {
+          const r = i % 2 === 0 ? radius : radius / 2;
+          const a = (Math.PI / points) * i - Math.PI / 2;
+          ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+        }
+        ctx.closePath();
+        ctx.fillStyle = shapeDef ? shapeDef.color : "#dd6b20";
+        ctx.fill();
+        ctx.strokeStyle = "#C05621";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+      }
+      function drawGear(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "gear");
+        const radius = shapeDef ? shapeDef.radius : 20;
+        const teeth = 8;
+        const toothHeight = radius * 0.25;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.fillStyle = shapeDef ? shapeDef.color : "#718096";
+        ctx.strokeStyle = "#2d3748";
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < teeth * 2; i++) {
+          const outerR = radius + (i % 2 === 0 ? toothHeight / 2 : 0);
+          const innerR = radius - (i % 2 !== 0 ? toothHeight / 2 : 0);
+          const a = (Math.PI / teeth) * i;
+          const tAngle = Math.PI / (teeth * 2);
+          if (i % 2 === 0) {
+            ctx.arc(0, 0, outerR, a - tAngle, a + tAngle);
+          } else {
+            ctx.arc(0, 0, innerR, a, a + Math.PI / teeth);
+          }
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.4, 0, Math.PI * 2);
+        ctx.fillStyle = render.options.background;
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      function drawLShape(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "lshape");
+        const width = shapeDef ? shapeDef.width : 40;
+        const height = shapeDef ? shapeDef.height : 40;
+        const thickness = Math.min(width, height) * 0.4;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = shapeDef ? shapeDef.color : "#9f7aea";
+        ctx.strokeStyle = "#6B46C1";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-width / 2, -height / 2);
+        ctx.lineTo(width / 2, -height / 2);
+        ctx.lineTo(width / 2, -height / 2 + thickness);
+        ctx.lineTo(-width / 2 + thickness, -height / 2 + thickness);
+        ctx.lineTo(-width / 2 + thickness, height / 2);
+        ctx.lineTo(-width / 2, height / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      function drawConcreteBlock(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "block");
+        const width = shapeDef ? shapeDef.width : 45;
+        const height = shapeDef ? shapeDef.height : 25;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = "#E2E8F0";
+        ctx.strokeStyle = "#A0AEC0";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.rect(-width / 2, -height / 2, width, height);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = "#CBD5E0";
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        for (let i = 0; i < 3; i++) {
+          const rx = -width / 2 + Math.random() * width;
+          const ry = -height / 2 + Math.random() * height;
+          ctx.moveTo(rx - 2, ry - 2);
+          ctx.lineTo(rx + 2, ry + 2);
+          ctx.moveTo(rx + 2, ry - 2);
+          ctx.lineTo(rx - 2, ry + 2);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+      function drawBananaShape(ctx, body) {
+        /* Placeable banana */ const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "bananaShape");
+        const width = shapeDef ? shapeDef.width : 40;
+        const height = shapeDef ? shapeDef.height : 15;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = "#faf089";
+        ctx.strokeStyle = "#ECC94B";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-width / 2, 0);
+        ctx.quadraticCurveTo(0, -height * 0.8, width / 2, 0);
+        ctx.quadraticCurveTo(0, height * 0.8, -width / 2, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      function drawShoe(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "shoe");
+        const width = shapeDef ? shapeDef.width : 50;
+        const height = shapeDef ? shapeDef.height : 20;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = "#718096";
+        ctx.strokeStyle = "#2D3748";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-width * 0.45, -height * 0.4);
+        ctx.lineTo(width * 0.3, -height * 0.45);
+        ctx.bezierCurveTo(width * 0.5, -height * 0.4, width * 0.5, height * 0.4, width * 0.45, height * 0.4);
+        ctx.lineTo(-width * 0.3, height * 0.45);
+        ctx.quadraticCurveTo(-width * 0.5, height * 0.5, -width * 0.45, -height * 0.4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      function drawWineGlass(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "wineGlass");
+        const width = shapeDef ? shapeDef.width : 25;
+        const height = shapeDef ? shapeDef.height : 45;
+        const bowlRadius = width * 0.7;
+        const bowlHeight = height * 0.5;
+        const stemHeight = height * 0.3;
+        const baseWidth = width * 0.9;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.strokeStyle = "#A0AEC0";
+        ctx.lineWidth = 1.5;
+        ctx.fillStyle = "#EBF8FF";
+        const bowlTopY = -height / 2;
+        const bowlBottomY = bowlTopY + bowlHeight;
+        ctx.beginPath();
+        ctx.moveTo(-bowlRadius / 2, bowlTopY);
+        ctx.quadraticCurveTo(0, bowlTopY - bowlRadius * 0.2, bowlRadius / 2, bowlTopY);
+        ctx.lineTo(bowlRadius * 0.4, bowlBottomY);
+        ctx.quadraticCurveTo(0, bowlBottomY + bowlRadius * 0.1, -bowlRadius * 0.4, bowlBottomY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        const stemTopY = bowlBottomY;
+        const stemBottomY = stemTopY + stemHeight;
+        ctx.beginPath();
+        ctx.moveTo(0, stemTopY);
+        ctx.lineTo(0, stemBottomY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(0, stemBottomY, baseWidth / 2, baseWidth * 0.15, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "#A0AEC0";
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      function drawBook(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "book");
+        const width = shapeDef ? shapeDef.width : 30;
+        const height = shapeDef ? shapeDef.height : 40;
+        const spineThickness = width * 0.15;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = "#FFFAF0";
+        ctx.strokeStyle = "#A0AEC0";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.rect(-width / 2 + spineThickness / 2, -height / 2, width - spineThickness, height);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = shapeDef ? shapeDef.color : "#9ae6b4";
+        ctx.strokeStyle = "#38A169";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.rect(-width / 2 - spineThickness / 2, -height / 2, spineThickness, height);
+        ctx.rect(width / 2 - spineThickness / 2, -height / 2, spineThickness / 2, height);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      function drawPizzaSlice(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "pizza");
+        const radius = shapeDef ? shapeDef.radius : 25;
+        const tipAngle = Math.PI / 5;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = "#FBD38D";
+        ctx.strokeStyle = "#ED8936";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, radius, -tipAngle, tipAngle);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#FED7D7";
+        ctx.strokeStyle = "#F56565";
+        ctx.lineWidth = 1;
+        const sauceRadius = radius * 0.85;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, sauceRadius, -tipAngle, tipAngle);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#E53E3E";
+        const pepRadius = radius * 0.1;
+        ctx.beginPath();
+        ctx.arc(sauceRadius * 0.6, 0, pepRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(
+          sauceRadius * 0.7 * Math.cos(tipAngle * 0.6),
+          sauceRadius * 0.7 * Math.sin(tipAngle * 0.6),
+          pepRadius * 0.8,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(
+          sauceRadius * 0.7 * Math.cos(-tipAngle * 0.6),
+          sauceRadius * 0.7 * Math.sin(-tipAngle * 0.6),
+          pepRadius * 0.8,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+        ctx.restore();
+      }
+      function drawDonut(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "donut");
+        const outerRadius = shapeDef ? shapeDef.radius : 20;
+        const innerRadius = outerRadius * 0.4;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = "#FBD38D";
+        ctx.strokeStyle = "#ED8936";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, outerRadius, 0, Math.PI * 2, false);
+        ctx.arc(0, 0, innerRadius, 0, Math.PI * 2, true);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#FBB6CE";
+        ctx.beginPath();
+        ctx.arc(0, 0, outerRadius * 0.9, 0, Math.PI * 2, false);
+        ctx.arc(0, 0, innerRadius * 1.1, 0, Math.PI * 2, true);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      function drawPlus(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeH = shapeTypes.find((s) => s.label === "plus_h");
+        const shapeV = shapeTypes.find((s) => s.label === "plus_v");
+        const width = shapeH ? shapeH.width : 40;
+        const height = shapeV ? shapeV.height : 40;
+        const thick = shapeH ? shapeH.height : 10;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = shapeH ? shapeH.color : "#667eea";
+        ctx.strokeStyle = "#4C51BF";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.rect(-width / 2, -thick / 2, width, thick);
+        ctx.rect(-thick / 2, -height / 2, thick, height);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      function drawTShape(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shapeH = shapeTypes.find((s) => s.label === "tshape_h");
+        const shapeV = shapeTypes.find((s) => s.label === "tshape_v");
+        const topW = shapeH ? shapeH.width : 40;
+        const stemH = shapeV ? shapeV.height : 30;
+        const thick = shapeH ? shapeH.height : 10;
+        const stemW = shapeV ? shapeV.width : 10;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = shapeH ? shapeH.color : "#ed64a6";
+        ctx.strokeStyle = "#B83280";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        const topY = -stemH / 2 + thick / 2;
+        const stemY = thick / 2;
+        ctx.rect(-topW / 2, topY - thick / 2, topW, thick);
+        ctx.rect(-stemW / 2, stemY - thick / 2, stemW, stemH);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      function drawArrow(ctx, body) {
+        /* ... */ const pos = body.position;
+        const angle = body.angle;
+        const shaftData = shapeTypes.find((s) => s.label === "arrow_shaft");
+        const headData = shapeTypes.find((s) => s.label === "arrow_head");
+        const shaftW = shaftData ? shaftData.width : 30;
+        const shaftH = shaftData ? shaftData.height : 10;
+        const headR = headData ? headData.radius : 10;
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = shaftData ? shaftData.color : "#a0aec0";
+        ctx.strokeStyle = "#4A5568";
+        ctx.lineWidth = 1;
+        const shaftStartX = -headR / 2 - shaftW / 2;
+        const headCenterX = shaftStartX + shaftW + headR * 0.6;
+        ctx.beginPath();
+        ctx.rect(shaftStartX, -shaftH / 2, shaftW, shaftH);
+        ctx.moveTo(headCenterX - headR, -headR);
+        ctx.lineTo(headCenterX + headR * 0.5, 0);
+        ctx.lineTo(headCenterX - headR, headR);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // --- NEW Drawing Functions for Words, Helmet, Muffin ---
+      function drawWord(ctx, body, word, color) {
+        const pos = body.position;
+        const angle = body.angle;
+        const bounds = body.bounds;
+        const width = bounds.max.x - bounds.min.x;
+        const height = bounds.max.y - bounds.min.y;
+
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+
+        // Draw the rectangle background (optional, if fillStyle isn't enough)
+        ctx.fillStyle = color;
+        ctx.fillRect(-width / 2, -height / 2, width, height);
+        ctx.strokeStyle = "rgba(0,0,0,0.2)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-width / 2, -height / 2, width, height);
+
+        // Draw the text centered
+        ctx.font = `bold ${height * 0.6}px Inter, sans-serif`; // Adjust font size based on height
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(word, 0, 0); // Draw text at the center
+
+        ctx.restore();
+      }
+
+      function drawSpartanHelmet(ctx, body) {
+        const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "helmet");
+        const color = shapeDef ? shapeDef.color : "#8D5B2A"; // Bronze color
+
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+
+        // Draw helmet shape using the vertices path (simplified drawing)
+        ctx.beginPath();
+        if (body.vertices && body.vertices.length > 0) {
+          ctx.moveTo(body.vertices[0].x - pos.x, body.vertices[0].y - pos.y); // Move to first vertex relative to body center
+          for (let i = 1; i < body.vertices.length; i++) {
+            ctx.lineTo(body.vertices[i].x - pos.x, body.vertices[i].y - pos.y);
+          }
+          ctx.closePath();
+        } else {
+          // Fallback if vertices aren't available for some reason
+          ctx.rect(-20, -20, 40, 40); // Draw a rectangle as fallback
+        }
+
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = "#5C4033"; // Darker brown outline
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Add a simple plume detail (optional)
+        ctx.fillStyle = "#DC2626"; // Red plume
+        ctx.beginPath();
+        ctx.moveTo(0, -20); // Top center
+        ctx.quadraticCurveTo(-5, -30, -10, -25);
+        ctx.quadraticCurveTo(-15, -35, 0, -30);
+        ctx.quadraticCurveTo(15, -35, 10, -25);
+        ctx.quadraticCurveTo(5, -30, 0, -20);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function drawMuffin(ctx, body) {
+        const pos = body.position;
+        const angle = body.angle;
+        const shapeDef = shapeTypes.find((s) => s.label === "muffin");
+        const radius = shapeDef ? shapeDef.radius : 18;
+        const colorBase = "#8B4513"; // Brown base
+        const colorTop = "#D2B48C"; // Tan top
+
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(angle);
+
+        // Draw muffin base (trapezoid shape)
+        const baseHeight = radius * 0.6;
+        const baseTopWidth = radius * 1.2;
+        const baseBottomWidth = radius * 0.8;
+        ctx.fillStyle = colorBase;
+        ctx.beginPath();
+        ctx.moveTo(-baseBottomWidth / 2, radius * 0.5);
+        ctx.lineTo(baseBottomWidth / 2, radius * 0.5);
+        ctx.lineTo(baseTopWidth / 2, radius * 0.5 - baseHeight);
+        ctx.lineTo(-baseTopWidth / 2, radius * 0.5 - baseHeight);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#5C4033";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Draw muffin top (rounded shape)
+        const topY = radius * 0.5 - baseHeight;
+        ctx.fillStyle = colorTop;
+        ctx.beginPath();
+        ctx.arc(0, topY, radius, Math.PI, 0); // Semi-circle top
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke(); // Outline top
+
+        // Add chocolate chips (optional)
+        ctx.fillStyle = "#3E2723"; // Dark brown
+        for (let i = 0; i < 5; i++) {
+          const chipX = (Math.random() - 0.5) * radius * 1.5;
+          const chipY = topY - Math.random() * radius * 0.6;
+          // Ensure chips are within the top part
+          if (Math.sqrt(chipX * chipX + (chipY - topY) * (chipY - topY)) < radius) {
+            ctx.beginPath();
+            ctx.arc(chipX, chipY, radius * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        ctx.restore();
+      }
+
+      // --- Animated Water Drawing ---
+      // (Remains the same)
+      let waveOffset = 0;
+      let waveAmplitude = 3;
+      let waveFrequency = 0.03;
+      function drawAnimatedWater(ctx) {
+        /* ... same as before ... */ if (!waterBody) return;
+        const waterY = waterBody.position.y - WATER_HEIGHT / 2;
+        const waterColor = "rgba(99,179,237,0.7)";
+        ctx.save();
+        ctx.fillStyle = waterColor;
+        ctx.strokeStyle = "rgba(56,161,243,0.9)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, waterY + Math.sin(waveOffset) * waveAmplitude);
+        for (let x = 0; x < CANVAS_WIDTH; x += 5) {
+          const y = waterY + Math.sin(x * waveFrequency + waveOffset) * waveAmplitude;
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.lineTo(0, CANVAS_HEIGHT);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(0, waterY + Math.sin(waveOffset) * waveAmplitude);
+        for (let x = 0; x < CANVAS_WIDTH; x += 5) {
+          const y = waterY + Math.sin(x * waveFrequency + waveOffset) * waveAmplitude;
+          ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.restore();
+        waveOffset += 0.05;
+      }
+
+      // --- Event Listeners Setup ---
+      function setupEventListeners() {
+        // Drag/Drop listeners (remain the same)
+        canvas.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+        });
+        canvas.addEventListener("dragleave", (e) => {});
+        canvas.addEventListener("drop", (e) => {
+          e.preventDefault();
+          if (isDraggingFromBin && currentDraggingShape && gameState === "PLAYING") {
+            const canvasRect = canvas.getBoundingClientRect();
+            const dropX = e.clientX - canvasRect.left;
+            const dropY = e.clientY - canvasRect.top;
+            if (dropY < CANVAS_HEIGHT - GROUND_HEIGHT - WATER_HEIGHT && dropY > 0) {
+              placeShape(dropX, SHAPE_SPAWN_Y, currentDraggingShape);
+            } else {
+              if (!shapeBin.querySelector(".bin-shape")) {
+                populateShapeBin();
+              }
+            }
+          }
+          isDraggingFromBin = false;
+          currentDraggingShape = null;
+        });
+        document.addEventListener("dragend", (e) => {
+          if (isDraggingFromBin) {
+            setTimeout(() => {
+              if (!shapeBin.querySelector(".bin-shape") && canPlaceShape) {
+                populateShapeBin();
+              }
+              isDraggingFromBin = false;
+              currentDraggingShape = null;
+            }, 50);
+          }
+        });
+
+        // Start/Restart Listener (remains the same)
+        messageOverlay.addEventListener("click", () => {
+          startAudioContext();
+          if (gameState === "PRE_START" || gameState === "POST_GAME") {
+            resetGameVariables();
+            startGame();
+          }
+        });
+
+        // Matter.js Collision Events (Score Fix Check)
+        Events.on(engine, "collisionStart", (event) => {
+          if (gameState !== "PLAYING") return;
+          const pairs = event.pairs;
+          let collisionMagnitude = 0;
+          let fellInWater = false;
+          pairs.forEach((pair) => {
+            const { bodyA, bodyB } = pair;
+            const labelA = bodyA.label || "";
+            const labelB = bodyB.label || "";
+
+            // Check for water collision
+            let fallingBody = null;
+            if (labelA === "water" && activeBodies.includes(bodyB)) fallingBody = bodyB;
+            else if (labelB === "water" && activeBodies.includes(bodyA)) fallingBody = bodyA;
+            if (fallingBody && !fellInWater) {
+              /* ... water handling ... */ waterSound.triggerAttackRelease("4n");
+              World.remove(world, fallingBody);
+              activeBodies = activeBodies.filter((b) => b.id !== fallingBody.id);
+              fellInWater = true;
+            }
+
+            // --- Check for banana collision (with logging) ---
+            let bananaBody = null;
+            let playerBody = null; // Keep track of the player body too
+            if (labelA === "banana" && activeBodies.includes(bodyB)) {
+              bananaBody = bodyA;
+              playerBody = bodyB;
+            } else if (labelB === "banana" && activeBodies.includes(bodyA)) {
+              bananaBody = bodyB;
+              playerBody = bodyA;
+            }
+
+            if (bananaBody && playerBody && bananaBodies.includes(bananaBody)) {
+              console.log(`Banana collision detected! Player body: ${playerBody.label}, Banana body: ${bananaBody.id}`); // DEBUG LOG
+              bananaSound.triggerAttackRelease("C6", "16n", Tone.now());
+              score += BANANA_SCORE; // Increment score
+              updateScoreDisplay(); // Update display *immediately*
+              World.remove(world, bananaBody); // Remove collected banana
+              bananaBodies = bananaBodies.filter((b) => b.id !== bananaBody.id);
+            }
+            // --- End Banana Check ---
+
+            // Calculate collision magnitude for sound effect
+            const isActiveA = activeBodies.includes(bodyA);
+            const isActiveB = activeBodies.includes(bodyB);
+            const isStaticA = bodyA.isStatic;
+            const isStaticB = bodyB.isStatic;
+            if (
+              (isActiveA && isActiveB) ||
+              (isActiveA && isStaticB && labelB !== "water" && labelB !== "banana") ||
+              (isActiveB && isStaticA && labelA !== "water" && labelA !== "banana")
+            ) {
+              /* ... collision sound calc ... */ const relVel = Vector.magnitude(
+                Vector.sub(bodyA.velocity, bodyB.velocity)
+              );
+              collisionMagnitude = Math.max(collisionMagnitude, relVel);
+            }
+          });
+
+          // Play collision sound
+          if (collisionMagnitude > COLLISION_SOUND_THRESHOLD) {
+            /* ... collision sound play ... */ const velocity = Math.min(1, collisionMagnitude / 10);
+            const note = Tone.Frequency(60 + velocity * 60, "midi").toNote();
+            collisionSynth.triggerAttackRelease(note, "16n", Tone.now(), velocity * 0.8);
+          }
+        });
+
+        // Custom Rendering Hook (Updated for new shapes)
+        Events.on(render, "afterRender", (event) => {
+          const ctx = render.context;
+          drawAnimatedWater(ctx); // Draw water background first
+
+          const bodies = Composite.allBodies(world);
+          ctx.save();
+          bodies.forEach((body) => {
+            const label = body.label || "";
+            // Draw active custom shapes
+            if (activeBodies.includes(body)) {
+              switch (label) {
+                // Keep existing cases...
+                case "ladder":
+                  drawLadder(ctx, body);
+                  break;
+                case "mug":
+                  drawMug(ctx, body);
+                  break;
+                case "star":
+                  drawStar(ctx, body);
+                  break;
+                case "gear":
+                  drawGear(ctx, body);
+                  break;
+                case "lshape":
+                  drawLShape(ctx, body);
+                  break;
+                case "block":
+                  drawConcreteBlock(ctx, body);
+                  break;
+                case "bananaShape":
+                  drawBananaShape(ctx, body);
+                  break;
+                case "shoe":
+                  drawShoe(ctx, body);
+                  break;
+                case "wineGlass":
+                  drawWineGlass(ctx, body);
+                  break;
+                case "book":
+                  drawBook(ctx, body);
+                  break;
+                case "pizza":
+                  drawPizzaSlice(ctx, body);
+                  break;
+                case "donut":
+                  drawDonut(ctx, body);
+                  break;
+                case "plus":
+                  drawPlus(ctx, body);
+                  break;
+                case "tshape":
+                  drawTShape(ctx, body);
+                  break;
+                case "arrow":
+                  drawArrow(ctx, body);
+                  break;
+
+                // --- ADDED CASES ---
+                case "wordCIA":
+                  drawWord(ctx, body, "CIA", "#DC2626");
+                  break;
+                case "wordCSU":
+                  drawWord(ctx, body, "CSU", "#2563EB");
+                  break;
+                case "wordAI":
+                  drawWord(ctx, body, "AI", "#F59E0B");
+                  break;
+                case "helmet":
+                  drawSpartanHelmet(ctx, body);
+                  break;
+                case "muffin":
+                  drawMuffin(ctx, body);
+                  break;
+              }
+            }
+            // Draw collectible bananas
+            if (label === "banana") {
+              drawBanana(ctx, body);
+            }
+          });
+          ctx.restore();
+        });
+
+        // Window Resize Listener (remains the same)
+        window.addEventListener("resize", handleResize);
+      } // End setupEventListeners
+
+      // --- Game Loop ---
+      // (Remains the same)
+      function gameLoop() {
+        if (gameState === "PLAYING") {
+          const height = calculateMaxHeight();
+          if (Math.abs(height - currentMaxHeight) > 1) {
+            currentMaxHeight = height;
+            updateHeightDisplay();
+          }
+        }
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+
+      // --- Level End Check ---
+      // (Remains the same)
+      function checkLevelEnd() {
+        if (gameState !== "PLAYING") return;
+        const finalHeight = calculateMaxHeight();
+        currentMaxHeight = Math.max(currentMaxHeight, finalHeight);
+        updateHeightDisplay();
+        const requiredHeight = REQUIRED_HEIGHT_PER_LEVEL_BASE + (level - 1) * REQUIRED_HEIGHT_PER_LEVEL_INCREMENT;
+        if (currentMaxHeight >= requiredHeight) {
+          nextLevel();
+        } else {
+          gameOver(`Time's up! Needed ${requiredHeight} height.`);
+        }
+      }
+
+      // --- Message Display ---
+      // (Remains the same)
+      function showMessage(mainText, subText = "") {
+        messageText.textContent = mainText;
+        subMessageText.textContent = subText;
+        messageOverlay.classList.add("visible");
+      }
+      function hideMessage() {
+        messageOverlay.classList.remove("visible");
+      }
+
+      // --- Resize Handling ---
+      // (Remains the same)
+      function handleResize() {
+        console.log("Window resize detected.");
+        updateCanvasSize();
+        if (world) {
+          createLevelBoundaries();
+          createLevelPlatforms(level);
+        } else {
+          console.warn("Resize called before engine initialization.");
+        }
+        console.warn("Resizing during gameplay might affect physics accuracy. Active shapes not repositioned.");
+      }
+
+      // --- Start the application ---
+      window.onload = init;
+    </script>
+  </body>
+</html>
