@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vector Shapes Stacker</title>
-    {/* Load Tailwind CSS */}
+
     <script src="https://cdn.tailwindcss.com"></script>
-    {/* Load Matter.js Physics Engine */}
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-    {/* Load Tone.js for Sound Effects */}
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
       /* Custom font and basic body styling */
@@ -239,7 +239,6 @@
   </head>
   <body>
     <div id="game-container">
-      {/* UI Elements */}
       <div id="ui-elements">
         <div id="timer" class="ui-item">Time: 60</div>
         <div id="height-display" class="ui-item">Max Height: 0</div>
@@ -247,7 +246,6 @@
         <div id="level-display" class="ui-item">Level: 1</div>
       </div>
 
-      {/* Game Canvas Container */}
       <div style="position: relative; width: 100%" id="canvas-container">
         <canvas id="game-canvas"></canvas>
         <div id="message-overlay">
@@ -256,12 +254,10 @@
         </div>
       </div>
 
-      {/* Shape Bin */}
       <div id="shape-bin">
         <span id="bin-placeholder" class="text-gray-500">Shape Bin</span>
       </div>
 
-      {/* Instructions Block */}
       <div id="instructions">
         <h4>How to Play:</h4>
         <ul>
