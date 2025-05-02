@@ -4,12 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vector Shapes Stacker</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pathseg@1.2.1/pathseg.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/poly-decomp@0.3.0/build/decomp.min.js"></script>
 
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
       /* Custom font and basic body styling */
       body {
@@ -36,7 +36,7 @@
         max-width: 95vw;
         max-height: 95vh;
         width: 100%;
-        overflow-y: auto; /* Allow scrolling if content overflows */
+        overflow-y: auto;
       }
       /* Style the game canvas */
       canvas {
@@ -131,13 +131,12 @@
         align-items: center;
         border: 2px solid #4a5568;
         border-radius: 4px;
-        font-size: 1.2rem; /* Larger font for letters */
+        font-size: 0.6rem;
         font-weight: bold;
-        color: rgba(255, 255, 255, 0.9); /* White text */
+        color: rgba(0, 0, 0, 0.6);
         overflow: hidden;
         position: relative;
         background-clip: padding-box; /* Ensure background respects border */
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); /* Text shadow for visibility */
       }
       .bin-shape:active {
         cursor: grabbing;
@@ -181,6 +180,7 @@
       .bin-lshape {
         background-color: #9f7aea;
       }
+      /* New shapes bin style */
       .bin-block {
         background-color: #cbd5e0;
         border: 1px dashed #a0aec0;
@@ -208,34 +208,6 @@
         border-radius: 50%;
         border: 8px solid #ed8936;
       } /* Orange donut */
-
-      /* New Shapes bin style */
-      .bin-plus {
-        background-color: #667eea;
-      } /* Indigo */
-      .bin-tshape {
-        background-color: #ed64a6;
-      } /* Pink */
-      .bin-arrow {
-        background-color: #a0aec0;
-      } /* Gray */
-
-      /* Letter Shapes bin style */
-      .bin-letter-c {
-        background-color: #f56565;
-      } /* Red */
-      .bin-letter-s {
-        background-color: #48bb78;
-      } /* Green */
-      .bin-letter-u {
-        background-color: #4299e1;
-      } /* Blue */
-      .bin-letter-i {
-        background-color: #f6e05e;
-      } /* Yellow */
-      .bin-letter-a {
-        background-color: #f6ad55;
-      } /* Orange */
 
       /* Instructions Block */
       #instructions {
@@ -314,7 +286,6 @@
         Mouse,
         MouseConstraint,
         Vector,
-        Vertices,
       } = Matter;
 
       // --- DOM Elements ---
@@ -368,7 +339,7 @@
       // --- Sound Effects Setup (Tone.js) ---
       let placeSound, bananaSound, waterSound, levelUpSound, gameOverSound, collisionSynth;
       function setupSounds() {
-        // (Previous sound setup code - kept as is)
+        /* ... (previous sound setup code) ... */
         placeSound = new Tone.Synth({
           oscillator: { type: "sine" },
           envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 },
@@ -409,21 +380,7 @@
         }
       }
 
-      // --- Shape Vertex Data ---
-      // Defining vertices relative to (0,0) center
-      const letterVertices = {
-        C: Vertices.fromPath("M 15 -17 A 15 17 0 0 0 15 17 L 5 17 A 10 12 0 0 1 5 -17 Z"), // Approx C
-        S: Vertices.fromPath("M 15 -17 C 15 -5 -15 -5 -15 0 S 15 5 15 17 L 5 17 C 5 10 -5 10 -5 0 S 5 -10 5 -17 Z"), // Approx S (complex path)
-        U: Vertices.fromPath(
-          "M -15 -17 L -15 10 Q -15 17 0 17 Q 15 17 15 10 L 15 -17 L 5 -17 L 5 10 Q 5 12 0 12 Q -5 12 -5 10 L -5 -17 Z"
-        ), // Approx U
-        I: Vertices.fromPath("M -5 -17 L 5 -17 L 5 17 L -5 17 Z"), // Simple I rect
-        A: Vertices.fromPath("M 0 -17 L 17 17 L 7 17 L 3 5 L -3 5 L -7 17 L -17 17 Z M -5 -2 L 5 -2 L 0 -9 Z"), // Approx A with hole
-      };
-      // Verify vertices (important for Matter.js)
-      Object.values(letterVertices).forEach((verts) => Vertices.clockwiseSort(verts)); // Ensure winding order
-
-      // --- Shape Definitions (Added new shapes and letters) ---
+      // --- Shape Definitions (Added new shapes) ---
       const shapeTypes = [
         // Original & Modified
         { type: "rectangle", width: 35, height: 35, color: "#f56565", binClass: "bin-rect", label: "playerShape" },
@@ -434,10 +391,11 @@
         { type: "rectangle", width: 80, height: 10, color: "#a0aec0", binClass: "bin-board", label: "board" }, // Board
         { type: "rectangle", width: 15, height: 60, color: "#ecc94b", binClass: "bin-ladder", label: "ladder" },
         { type: "rectangle", width: 25, height: 30, color: "#f6ad55", binClass: "bin-mug", label: "mug" },
-        { type: "polygon", sides: 5, radius: 20, color: "#dd6b20", binClass: "bin-star", label: "star" }, // Uses custom drawStar
-        { type: "circle", radius: 20, color: "#718096", binClass: "bin-gear", label: "gear" }, // Uses custom drawGear
-        { type: "rectangle", width: 40, height: 40, color: "#9f7aea", binClass: "bin-lshape", label: "lshape" }, // Uses custom drawLShape
-        { type: "rectangle", width: 45, height: 25, color: "#cbd5e0", binClass: "bin-block", label: "block" }, // Uses custom drawConcreteBlock
+        { type: "polygon", sides: 5, radius: 20, color: "#dd6b20", binClass: "bin-star", label: "star" },
+        { type: "circle", radius: 20, color: "#718096", binClass: "bin-gear", label: "gear" },
+        { type: "rectangle", width: 40, height: 40, color: "#9f7aea", binClass: "bin-lshape", label: "lshape" },
+        // New Additions
+        { type: "rectangle", width: 45, height: 25, color: "#cbd5e0", binClass: "bin-block", label: "block" }, // Concrete Block
         {
           type: "rectangle",
           width: 40,
@@ -445,80 +403,16 @@
           color: "#faf089",
           binClass: "bin-banana-shape",
           label: "bananaShape",
-        }, // Uses custom drawBananaShape
-        { type: "rectangle", width: 50, height: 20, color: "#718096", binClass: "bin-shoe", label: "shoe" }, // Uses custom drawShoe
-        { type: "rectangle", width: 25, height: 45, color: "#bee3f8", binClass: "bin-wine-glass", label: "wineGlass" }, // Uses custom drawWineGlass
-        { type: "rectangle", width: 30, height: 40, color: "#9ae6b4", binClass: "bin-book", label: "book" }, // Uses custom drawBook
-        { type: "polygon", sides: 3, radius: 25, color: "#fed7d7", binClass: "bin-pizza", label: "pizza" }, // Uses custom drawPizzaSlice
-        { type: "circle", radius: 20, color: "#fbd38d", binClass: "bin-donut", label: "donut" }, // Uses custom drawDonut
-
-        // --- New Generic Shapes ---
-        { type: "rectangle", width: 40, height: 10, color: "#667eea", binClass: "bin-plus", label: "plus_h" }, // Part of plus
-        { type: "rectangle", width: 10, height: 40, color: "#667eea", binClass: "bin-plus", label: "plus_v" }, // Part of plus - combined in placeShape
-        { type: "rectangle", width: 40, height: 10, color: "#ed64a6", binClass: "bin-tshape", label: "tshape_h" }, // Part of T
-        { type: "rectangle", width: 10, height: 30, color: "#ed64a6", binClass: "bin-tshape", label: "tshape_v" }, // Part of T - combined in placeShape
-        { type: "rectangle", width: 30, height: 10, color: "#a0aec0", binClass: "bin-arrow", label: "arrow_shaft" }, // Part of arrow
-        { type: "polygon", sides: 3, radius: 10, color: "#a0aec0", binClass: "bin-arrow", label: "arrow_head" }, // Part of arrow - combined in placeShape
-
-        // --- Letter Shapes (using vertices) ---
-        // Note: Bin class is representative color, actual drawing handles the letter shape
-        {
-          type: "vertices",
-          vertices: letterVertices.C,
-          color: "#f56565",
-          binClass: "bin-letter-c",
-          label: "letterC",
-          letter: "C",
-        },
-        {
-          type: "vertices",
-          vertices: letterVertices.S,
-          color: "#48bb78",
-          binClass: "bin-letter-s",
-          label: "letterS",
-          letter: "S",
-        },
-        {
-          type: "vertices",
-          vertices: letterVertices.U,
-          color: "#4299e1",
-          binClass: "bin-letter-u",
-          label: "letterU",
-          letter: "U",
-        },
-        {
-          type: "vertices",
-          vertices: letterVertices.I,
-          color: "#f6e05e",
-          binClass: "bin-letter-i",
-          label: "letterI",
-          letter: "I",
-        },
-        {
-          type: "vertices",
-          vertices: letterVertices.A,
-          color: "#f6ad55",
-          binClass: "bin-letter-a",
-          label: "letterA",
-          letter: "A",
-        },
+        }, // Banana Shape (physics)
+        { type: "rectangle", width: 50, height: 20, color: "#718096", binClass: "bin-shoe", label: "shoe" }, // Shoe (physics)
+        { type: "rectangle", width: 25, height: 45, color: "#bee3f8", binClass: "bin-wine-glass", label: "wineGlass" }, // Wine Glass (physics)
+        { type: "rectangle", width: 30, height: 40, color: "#9ae6b4", binClass: "bin-book", label: "book" }, // Book (physics)
+        { type: "polygon", sides: 3, radius: 25, color: "#fed7d7", binClass: "bin-pizza", label: "pizza" }, // Pizza Slice (physics)
+        { type: "circle", radius: 20, color: "#fbd38d", binClass: "bin-donut", label: "donut" }, // Donut (physics)
       ];
-
-      // Filter out partial composite shapes from direct selection in the bin
-      const placeableShapeTypes = shapeTypes.filter(
-        (s) => !["plus_h", "plus_v", "tshape_h", "tshape_v", "arrow_shaft", "arrow_head"].includes(s.label)
-      );
 
       // --- Initialization ---
       function init() {
-        // Make sure decomp is available for vertex shapes if needed
-        if (typeof decomp !== "undefined") {
-          Matter.Common.setDecomp(decomp);
-          console.log("Using poly-decomp library.");
-        } else {
-          console.warn("poly-decomp.js not loaded. Complex concave shapes might not behave correctly.");
-        }
-
         updateCanvasSize();
         engine = Engine.create({ enableSleeping: true });
         world = engine.world;
@@ -536,7 +430,7 @@
           mouse: mouse,
           constraint: { stiffness: 0.2, render: { visible: false } },
         });
-        mouseConstraint.collisionFilter.mask = 0; // Only interact with bodies via events, not direct drag
+        mouseConstraint.collisionFilter.mask = 0;
         World.add(world, mouseConstraint);
         render.mouse = mouse;
         resetGameVariables();
@@ -550,7 +444,7 @@
 
       // --- Canvas Size Update ---
       function updateCanvasSize() {
-        // (Previous canvas size update code - kept as is)
+        /* ... (previous canvas size update code) ... */
         const containerWidth = canvasContainer.offsetWidth;
         CANVAS_WIDTH = Math.min(containerWidth, 550);
         CANVAS_HEIGHT = Math.min(window.innerHeight * 0.5, 400);
@@ -565,7 +459,6 @@
 
       // --- World Creation Functions ---
       function createLevelBoundaries() {
-        // Remove old boundaries first if they exist
         Composite.allBodies(world).forEach((body) => {
           if (["ground", "wall", "water"].includes(body.label)) {
             World.remove(world, body);
@@ -588,7 +481,7 @@
           label: "wall",
           render: { visible: false },
         });
-        // Store water body reference and make its default render invisible
+        // **Store water body reference and make its default render invisible**
         waterBody = Bodies.rectangle(
           CANVAS_WIDTH / 2,
           CANVAS_HEIGHT - GROUND_HEIGHT - WATER_HEIGHT / 2,
@@ -605,7 +498,7 @@
       }
 
       function createLevelPlatforms(currentLevel) {
-        // (Previous platform/banana generation code - kept as is)
+        /* ... (previous platform/banana generation code) ... */
         [...platformBodies, ...bananaBodies].forEach((body) => World.remove(world, body));
         platformBodies = [];
         bananaBodies = [];
@@ -615,7 +508,7 @@
           render: { fillStyle: "#a0aec0", strokeStyle: "#4a5568", lineWidth: 1 },
           friction: 0.6,
         };
-        const bananaOptions = { isStatic: true, isSensor: true, label: "banana", render: { visible: false } }; // Banana visual handled by drawBanana
+        const bananaOptions = { isStatic: true, isSensor: true, label: "banana", render: { visible: false } };
         const bananaRadius = 8;
         const numPlatforms = Math.min(2 + Math.floor(currentLevel / 2), 5);
         const minY = CANVAS_HEIGHT * 0.3;
@@ -649,7 +542,6 @@
                   bananaRadius,
                   bananaOptions
                 );
-                banana.collisionFilter.mask = 0; // Ensure bananas don't physically interact, only trigger sensor events
                 bananaBodies.push(banana);
               }
               placed = true;
@@ -663,7 +555,7 @@
 
       // --- Game State Management ---
       function startGame() {
-        // (Previous start game code - kept as is)
+        /* ... (previous start game code) ... */
         if (gameState === "PLAYING") return;
         startAudioContext(); // Ensure audio is ready on first interaction
         console.log("Starting Game/Level", level);
@@ -677,7 +569,7 @@
         scheduleStabilityCheck();
       }
       function resetGameVariables() {
-        // (Previous reset game vars code - kept as is)
+        /* ... (previous reset game vars code) ... */
         level = 1;
         score = 0;
         currentMaxHeight = 0;
@@ -686,7 +578,7 @@
         updateLevelDisplay();
       }
       function resetLevel() {
-        // (Previous reset level code - kept as is)
+        /* ... (previous reset level code) ... */
         activeBodies.forEach((body) => World.remove(world, body));
         activeBodies = [];
         timeLeft = LEVEL_TIME;
@@ -700,7 +592,7 @@
         clearInterval(gameTimerInterval);
       }
       function nextLevel() {
-        // (Previous next level code - kept as is)
+        /* ... (previous next level code) ... */
         level++;
         gameState = "LEVEL_COMPLETE";
         levelUpSound.triggerAttackRelease(["C4", "E4", "G4", "C5"], "0.5"); // Play level up chord
@@ -712,7 +604,7 @@
         }, 2500);
       }
       function gameOver(reason = "Time's up!") {
-        // (Previous game over code - kept as is)
+        /* ... (previous game over code) ... */
         gameState = "GAME_OVER";
         const finalHeight = calculateMaxHeight();
         gameOverSound.triggerAttackRelease("C3", "1"); // Play game over sound
@@ -731,7 +623,7 @@
 
       // --- Timer ---
       function startTimer() {
-        // (Previous timer code - kept as is)
+        /* ... (previous timer code) ... */
         clearInterval(gameTimerInterval);
         timeLeft = LEVEL_TIME;
         updateTimerDisplay();
@@ -754,13 +646,11 @@
 
       // --- Height Calculation ---
       function calculateMaxHeight() {
-        // (Previous height calc code - kept as is)
+        /* ... (previous height calc code) ... */
         let maxHeight = 0;
         if (activeBodies.length === 0) return 0;
         activeBodies.forEach((body) => {
-          // Use bounds.min.y for the highest point of the body
           const bodyTopY = body.bounds.min.y;
-          // Ensure the body is above the ground level for calculation
           if (bodyTopY < CANVAS_HEIGHT - GROUND_HEIGHT) {
             const height = CANVAS_HEIGHT - GROUND_HEIGHT - bodyTopY;
             if (height > maxHeight) maxHeight = height;
@@ -780,7 +670,7 @@
 
       // --- Stability Check ---
       function checkStability() {
-        // (Previous stability check code - kept as is)
+        /* ... (previous stability check code) ... */
         if (gameState !== "PLAYING") {
           scheduleStabilityCheck();
           return;
@@ -795,18 +685,16 @@
         }
         let totalSpeed = 0;
         activeBodies.forEach((body) => {
-          totalSpeed += Matter.Vector.magnitude(body.velocity) + Math.abs(body.angularVelocity);
-        }); // Include angular speed
+          totalSpeed += Matter.Vector.magnitude(body.velocity);
+        });
         const averageSpeed = totalSpeed / activeBodies.length;
         if (averageSpeed < STABILITY_THRESHOLD) {
           if (!canPlaceShape) {
-            console.log("Stack stable, enabling shape placement.");
             canPlaceShape = true;
             populateShapeBin();
           }
         } else {
           if (canPlaceShape) {
-            console.log("Stack unstable, disabling shape placement.");
             canPlaceShape = false;
             clearShapeBin();
             binPlaceholder.textContent = "Waiting...";
@@ -816,33 +704,27 @@
       }
       function scheduleStabilityCheck() {
         clearTimeout(stabilityCheckTimeout);
-        if (gameState === "PLAYING" || gameState === "LEVEL_COMPLETE") {
+        if (gameState === "PLAYING") {
           stabilityCheckTimeout = setTimeout(checkStability, STABILITY_CHECK_INTERVAL);
         }
       }
 
       // --- Shape Bin Logic ---
       function populateShapeBin() {
+        /* ... (previous shape bin code) ... */
         if (!canPlaceShape || shapeBin.querySelector(".bin-shape")) {
           if (!canPlaceShape && gameState === "PLAYING") binPlaceholder.textContent = "Waiting...";
-          else if (shapeBin.querySelector(".bin-shape")) binPlaceholder.textContent = ""; // Already populated
+          else if (shapeBin.querySelector(".bin-shape")) binPlaceholder.textContent = "";
           else if (gameState !== "PLAYING" && gameState !== "POST_GAME") binPlaceholder.textContent = "Shape Bin";
           return;
         }
         clearShapeBin();
         binPlaceholder.textContent = "";
-
-        // Use the filtered list of placeable shapes
-        const randomShapeData = placeableShapeTypes[Math.floor(Math.random() * placeableShapeTypes.length)];
+        const randomShapeData = shapeTypes[Math.floor(Math.random() * shapeTypes.length)];
         const shapeElement = document.createElement("div");
         shapeElement.classList.add("bin-shape", randomShapeData.binClass);
-        // Add text for letters in the bin
-        if (randomShapeData.letter) {
-          shapeElement.textContent = randomShapeData.letter;
-        }
         shapeElement.dataset.shapeInfo = JSON.stringify(randomShapeData);
         shapeElement.draggable = true;
-
         shapeElement.addEventListener("dragstart", (e) => {
           startAudioContext();
           if (!canPlaceShape || gameState !== "PLAYING") {
@@ -852,9 +734,8 @@
           isDraggingFromBin = true;
           currentDraggingShape = randomShapeData;
           try {
-            e.dataTransfer.setData("text/plain", JSON.stringify(randomShapeData));
-            e.dataTransfer.effectAllowed = "copy";
-          } catch (err) {} // Store data
+            e.dataTransfer.setData("text/plain", "");
+          } catch (err) {}
         });
         shapeElement.addEventListener(
           "touchstart",
@@ -866,38 +747,34 @@
             e.preventDefault();
             isDraggingFromBin = true;
             currentDraggingShape = randomShapeData;
-            // Create a ghost element for touch drag feedback
             const clone = shapeElement.cloneNode(true);
             clone.style.position = "absolute";
             clone.style.opacity = "0.7";
             clone.style.pointerEvents = "none";
             clone.style.zIndex = "1000";
             const touch = e.touches[0];
-            // Center the clone on the touch point
             clone.style.left = `${touch.clientX - clone.offsetWidth / 2}px`;
             clone.style.top = `${touch.clientY - clone.offsetHeight / 2}px`;
             document.body.appendChild(clone);
-            currentDraggingBody = clone; // Store reference to the ghost
-
+            currentDraggingBody = clone;
             const touchMoveHandler = (moveEvent) => {
               if (!currentDraggingBody) return;
               const touch = moveEvent.touches[0];
-              // Update ghost position smoothly
-              currentDraggingBody.style.left = `${touch.clientX - currentDraggingBody.offsetWidth / 2}px`;
-              currentDraggingBody.style.top = `${touch.clientY - currentDraggingBody.offsetHeight / 2}px`;
+              currentDraggingBody.style.transform = `translate(${touch.clientX - clone.offsetWidth / 2}px, ${
+                touch.clientY - clone.offsetHeight / 2
+              }px)`;
             };
             const touchEndHandler = (endEvent) => {
               document.removeEventListener("touchmove", touchMoveHandler);
               document.removeEventListener("touchend", touchEndHandler);
               if (currentDraggingBody) {
                 document.body.removeChild(currentDraggingBody);
-              } // Clean up ghost
+              }
               if (currentDraggingShape) {
                 const touch = endEvent.changedTouches[0];
                 const canvasRect = canvas.getBoundingClientRect();
                 const dropX = touch.clientX - canvasRect.left;
                 const dropY = touch.clientY - canvasRect.top;
-                // Check if drop is within canvas bounds (above water)
                 if (
                   dropX > 0 &&
                   dropX < CANVAS_WIDTH &&
@@ -906,7 +783,6 @@
                 ) {
                   placeShape(dropX, SHAPE_SPAWN_Y, currentDraggingShape);
                 } else {
-                  // If dropped outside, ensure bin repopulates if empty
                   if (!shapeBin.querySelector(".bin-shape")) {
                     populateShapeBin();
                   }
@@ -916,32 +792,27 @@
               currentDraggingShape = null;
               currentDraggingBody = null;
             };
-            document.addEventListener("touchmove", touchMoveHandler, { passive: false }); // Allow preventDefault inside handler
+            document.addEventListener("touchmove", touchMoveHandler);
             document.addEventListener("touchend", touchEndHandler);
           },
           { passive: false }
-        ); // Allow preventDefault on touchstart
-
+        );
         shapeBin.appendChild(shapeElement);
       }
-
       function clearShapeBin() {
-        // (Previous clear bin code - modified slightly)
-        shapeBin.innerHTML = ""; // Clear existing content
-        shapeBin.appendChild(binPlaceholder); // Re-add placeholder
+        /* ... (previous clear bin code) ... */
+        shapeBin.innerHTML = "";
         if (canPlaceShape || gameState !== "PLAYING") {
+          shapeBin.appendChild(binPlaceholder);
           binPlaceholder.textContent = "Shape Bin";
-        } else {
-          binPlaceholder.textContent = "Waiting..."; // Set waiting text if needed
         }
       }
 
-      // --- Placing Shapes (Updated for Vertices and Composites) ---
+      // --- Placing Shapes ---
       function placeShape(x, y, shapeData) {
         if (!canPlaceShape || gameState !== "PLAYING") return;
         let newBody;
-        // Determine if custom drawing is needed
-        const customDrawLabels = [
+        const isCustomRender = [
           "ladder",
           "mug",
           "star",
@@ -954,133 +825,49 @@
           "book",
           "pizza",
           "donut",
-          "letterC",
-          "letterS",
-          "letterU",
-          "letterI",
-          "letterA",
-          "plus",
-          "tshape",
-          "arrow",
-        ];
-        const isCustomRender = customDrawLabels.includes(shapeData.label);
+        ].includes(shapeData.label); // Added new labels
         const options = {
           restitution: 0.4,
           friction: 0.5,
           density: 0.0015,
           label: shapeData.label || "playerShape",
-          render: {
-            // Render outlines for debugging vertex shapes if needed
-            // visible: !isCustomRender || shapeData.type === 'vertices',
-            // strokeStyle: shapeData.type === 'vertices' ? '#FF0000' : shapeData.color,
-            // lineWidth: 1,
-            fillStyle: shapeData.color, // Keep fillStyle for default rendering
-            visible: !isCustomRender, // Hide default render if we have a custom draw function
-          },
+          render: { fillStyle: shapeData.color, visible: !isCustomRender },
         };
-        // Ensure the shape spawns within bounds, considering its potential width/radius
-        const halfWidth = shapeData.width
-          ? shapeData.width / 2
-          : shapeData.radius || (shapeData.type === "vertices" ? 20 : 0); // Estimate for vertices
+        const halfWidth = shapeData.width ? shapeData.width / 2 : shapeData.radius || 0;
         const safeX = Math.max(halfWidth + 5, Math.min(CANVAS_WIDTH - halfWidth - 5, x));
-        const safeY = SHAPE_SPAWN_Y; // Always spawn near the top
+        const safeY = SHAPE_SPAWN_Y;
 
-        // Handle Composite Shapes (Plus, T-Shape, Arrow)
-        if (shapeData.label === "plus_h") {
-          // Triggered by bin item 'plus'
-          const plusH = shapeTypes.find((s) => s.label === "plus_h");
-          const plusV = shapeTypes.find((s) => s.label === "plus_v");
-          const horizontal = Bodies.rectangle(0, 0, plusH.width, plusH.height);
-          const vertical = Bodies.rectangle(0, 0, plusV.width, plusV.height);
-          newBody = Body.create({
-            parts: [horizontal, vertical],
-            label: "plus", // Composite label
-            render: { visible: false }, // Use custom drawing
-            restitution: options.restitution,
-            friction: options.friction,
-            density: options.density,
-          });
-          Body.setPosition(newBody, { x: safeX, y: safeY });
-        } else if (shapeData.label === "tshape_h") {
-          // Triggered by bin item 'tshape'
-          const tH = shapeTypes.find((s) => s.label === "tshape_h");
-          const tV = shapeTypes.find((s) => s.label === "tshape_v");
-          const topBar = Bodies.rectangle(0, -tV.height / 2 + tH.height / 2, tH.width, tH.height);
-          const stem = Bodies.rectangle(0, tH.height / 2, tV.width, tV.height);
-          newBody = Body.create({
-            parts: [topBar, stem],
-            label: "tshape",
-            render: { visible: false },
-            restitution: options.restitution,
-            friction: options.friction,
-            density: options.density,
-          });
-          Body.setPosition(newBody, { x: safeX, y: safeY });
-        } else if (shapeData.label === "arrow_shaft") {
-          // Triggered by bin item 'arrow'
-          const shaftData = shapeTypes.find((s) => s.label === "arrow_shaft");
-          const headData = shapeTypes.find((s) => s.label === "arrow_head");
-          const shaft = Bodies.rectangle(-headData.radius / 2, 0, shaftData.width, shaftData.height);
-          // Position head relative to shaft end
-          const head = Bodies.polygon(shaftData.width / 2, 0, headData.sides, headData.radius);
-          newBody = Body.create({
-            parts: [shaft, head],
-            label: "arrow",
-            render: { visible: false },
-            restitution: options.restitution,
-            friction: options.friction,
-            density: options.density,
-          });
-          Body.setPosition(newBody, { x: safeX, y: safeY });
-        } else {
-          // Handle simple and vertex shapes
-          switch (shapeData.type) {
-            case "rectangle":
-              newBody = Bodies.rectangle(safeX, safeY, shapeData.width, shapeData.height, options);
-              break;
-            case "circle":
-              newBody = Bodies.circle(safeX, safeY, shapeData.radius, options);
-              break;
-            case "polygon":
-              const sides = Math.max(3, shapeData.sides || 3);
-              newBody = Bodies.polygon(safeX, safeY, sides, shapeData.radius, options);
-              break;
-            case "vertices":
-              // Clone vertices to avoid modifying the original array
-              const clonedVertices = shapeData.vertices.map((v) => ({ ...v }));
-              newBody = Bodies.fromVertices(safeX, safeY, [clonedVertices], options); // Note: fromVertices expects vertices in a nested array
-              if (!newBody) {
-                console.error("Failed to create body from vertices:", shapeData.label, clonedVertices);
-                return; // Don't proceed if body creation failed
-              }
-              break;
-            default:
-              console.error("Unknown shape type:", shapeData.type);
-              return;
-          }
+        switch (shapeData.type) {
+          case "rectangle":
+            newBody = Bodies.rectangle(safeX, safeY, shapeData.width, shapeData.height, options);
+            break;
+          case "circle":
+            newBody = Bodies.circle(safeX, safeY, shapeData.radius, options);
+            break;
+          case "polygon":
+            const sides = Math.max(3, shapeData.sides || 3);
+            newBody = Bodies.polygon(safeX, safeY, sides, shapeData.radius, options);
+            break;
+          default:
+            console.error("Unknown shape type:", shapeData.type);
+            return;
         }
-
-        if (!newBody) {
-          console.error("Failed to create body for shape:", shapeData);
-          return;
-        }
-
-        Body.setVelocity(newBody, { x: (Math.random() - 0.5) * 0.5, y: 1 }); // Small initial velocity
-        Body.setAngularVelocity(newBody, (Math.random() - 0.5) * 0.03); // Small initial spin
+        Body.setVelocity(newBody, { x: (Math.random() - 0.5) * 0.5, y: 1 });
+        Body.setAngularVelocity(newBody, (Math.random() - 0.5) * 0.03);
         World.add(world, newBody);
         activeBodies.push(newBody);
         placeSound.triggerAttackRelease("C4", "8n");
         canPlaceShape = false;
         clearShapeBin();
         binPlaceholder.textContent = "Waiting...";
-        scheduleStabilityCheck(); // Check stability after a delay
+        scheduleStabilityCheck();
         isDraggingFromBin = false;
         currentDraggingShape = null;
       }
 
       // --- Custom Drawing Functions ---
-      // (Previous drawing functions: drawLadder, drawMug, drawBanana, drawStar, drawGear, drawLShape, drawConcreteBlock, drawBananaShape, drawShoe, drawWineGlass, drawBook, drawPizzaSlice, drawDonut - kept as is)
       function drawLadder(ctx, body) {
+        /* ... */
         const pos = body.position;
         const angle = body.angle;
         const shapeDef = shapeTypes.find((s) => s.label === "ladder");
@@ -1111,6 +898,7 @@
         ctx.restore();
       }
       function drawMug(ctx, body) {
+        /* ... */
         const pos = body.position;
         const angle = body.angle;
         const shapeDef = shapeTypes.find((s) => s.label === "mug");
@@ -1134,7 +922,7 @@
         ctx.restore();
       }
       function drawBanana(ctx, body) {
-        // For collectibles
+        /* ... */
         const pos = body.position;
         const radius = body.circleRadius || 8;
         ctx.save();
@@ -1151,7 +939,6 @@
         );
         ctx.closePath();
         ctx.fill();
-        // Simple stem
         ctx.beginPath();
         ctx.arc(radius * 0.3, -radius * 0.4, radius * 0.1, 0, Math.PI * 2);
         ctx.fillStyle = "#A0522D";
@@ -1159,6 +946,7 @@
         ctx.restore();
       }
       function drawStar(ctx, body) {
+        /* ... */
         const pos = body.position;
         const angle = body.angle;
         const shapeDef = shapeTypes.find((s) => s.label === "star");
@@ -1183,6 +971,7 @@
         ctx.restore();
       }
       function drawGear(ctx, body) {
+        /* ... */
         const pos = body.position;
         const angle = body.angle;
         const shapeDef = shapeTypes.find((s) => s.label === "gear");
@@ -1196,32 +985,20 @@
         ctx.fillStyle = shapeDef ? shapeDef.color : "#718096";
         ctx.strokeStyle = "#2d3748";
         ctx.lineWidth = 1.5;
-        // Draw gear outline
         for (let i = 0; i < teeth * 2; i++) {
-          const r = radius * (i % 2 === 0 ? 1 : 0.7);
-          const toothAngle = Math.PI / teeth;
-          const currentAngle = toothAngle * i;
-          const nextAngle = toothAngle * (i + 1);
-
+          const outerR = radius + (i % 2 === 0 ? toothHeight : 0);
+          const innerR = radius - (i % 2 !== 0 ? toothHeight * 0.5 : 0);
+          const a = (Math.PI / teeth) * i;
           if (i % 2 === 0) {
-            // Outer edge of tooth
-            ctx.arc(
-              0,
-              0,
-              radius + toothHeight / 2,
-              currentAngle - toothAngle / 4,
-              currentAngle + toothAngle / 4,
-              false
-            );
+            ctx.lineTo(outerR * Math.cos(a - Math.PI / (teeth * 2)), outerR * Math.sin(a - Math.PI / (teeth * 2)));
+            ctx.lineTo(outerR * Math.cos(a + Math.PI / (teeth * 2)), outerR * Math.sin(a + Math.PI / (teeth * 2)));
           } else {
-            // Inner valley
-            ctx.arc(0, 0, radius - toothHeight / 2, currentAngle, nextAngle, false); // Approximating valley
+            ctx.lineTo(innerR * Math.cos(a), innerR * Math.sin(a));
           }
         }
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        // Draw inner hole
         ctx.beginPath();
         ctx.arc(0, 0, radius * 0.4, 0, Math.PI * 2);
         ctx.fillStyle = render.options.background;
@@ -1230,6 +1007,7 @@
         ctx.restore();
       }
       function drawLShape(ctx, body) {
+        /* ... */
         const pos = body.position;
         const angle = body.angle;
         const shapeDef = shapeTypes.find((s) => s.label === "lshape");
@@ -1242,19 +1020,19 @@
         ctx.fillStyle = shapeDef ? shapeDef.color : "#9f7aea";
         ctx.strokeStyle = "#6B46C1";
         ctx.lineWidth = 2;
-        // Draw L-shape path (adjust origin if needed based on physics body center)
         ctx.beginPath();
-        ctx.moveTo(-width / 2, -height / 2); // Top-left
-        ctx.lineTo(width / 2, -height / 2); // Top-right
-        ctx.lineTo(width / 2, -height / 2 + thickness); // Inner top-right corner
-        ctx.lineTo(-width / 2 + thickness, -height / 2 + thickness); // Inner bottom-left corner
-        ctx.lineTo(-width / 2 + thickness, height / 2); // Bottom-left of vertical part
-        ctx.lineTo(-width / 2, height / 2); // Bottom-left outer
+        ctx.moveTo(-width / 2, -height / 2);
+        ctx.lineTo(width / 2, -height / 2);
+        ctx.lineTo(width / 2, -height / 2 + thickness);
+        ctx.lineTo(-width / 2 + thickness, -height / 2 + thickness);
+        ctx.lineTo(-width / 2 + thickness, height / 2);
+        ctx.lineTo(-width / 2, height / 2);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
         ctx.restore();
       }
+      // --- NEW Drawing Functions ---
       function drawConcreteBlock(ctx, body) {
         const pos = body.position;
         const angle = body.angle;
@@ -1271,39 +1049,46 @@
         ctx.rect(-width / 2, -height / 2, width, height);
         ctx.fill();
         ctx.stroke();
-        // Optional texture
-        ctx.strokeStyle = "#CBD5E0";
+        // Add some texture lines (optional)
+        ctx.strokeStyle = "#CBD5E0"; // Lighter gray lines
         ctx.lineWidth = 0.5;
         ctx.beginPath();
-        for (let i = 0; i < 3; i++) {
-          const rx = -width / 2 + Math.random() * width;
-          const ry = -height / 2 + Math.random() * height;
-          ctx.moveTo(rx - 2, ry - 2);
-          ctx.lineTo(rx + 2, ry + 2);
-          ctx.moveTo(rx + 2, ry - 2);
-          ctx.lineTo(rx - 2, ry + 2);
+        for (let i = -width / 2 + 5; i < width / 2; i += 8) {
+          ctx.moveTo(i, -height / 2);
+          ctx.lineTo(i, height / 2);
+        }
+        for (let j = -height / 2 + 5; j < height / 2; j += 8) {
+          ctx.moveTo(-width / 2, j);
+          ctx.lineTo(width / 2, j);
         }
         ctx.stroke();
         ctx.restore();
       }
       function drawBananaShape(ctx, body) {
-        // Placeable banana
+        // Drawing for the placeable banana shape
         const pos = body.position;
         const angle = body.angle;
         const shapeDef = shapeTypes.find((s) => s.label === "bananaShape");
         const width = shapeDef ? shapeDef.width : 40;
         const height = shapeDef ? shapeDef.height : 15;
+        const radius = height / 2; // Use height for radius
         ctx.save();
         ctx.translate(pos.x, pos.y);
         ctx.rotate(angle);
         ctx.fillStyle = "#faf089";
         ctx.strokeStyle = "#ECC94B";
         ctx.lineWidth = 1.5;
-        // Draw a simple curved shape (adjust control points for more curve)
         ctx.beginPath();
-        ctx.moveTo(-width / 2, 0);
-        ctx.quadraticCurveTo(0, -height * 0.8, width / 2, 0); // Top curve
-        ctx.quadraticCurveTo(0, height * 0.8, -width / 2, 0); // Bottom curve
+        // Draw a curved rectangle shape
+        ctx.moveTo(-width / 2 + radius, -height / 2);
+        ctx.lineTo(width / 2 - radius, -height / 2);
+        ctx.arcTo(width / 2, -height / 2, width / 2, -height / 2 + radius, radius);
+        ctx.lineTo(width / 2, height / 2 - radius);
+        ctx.arcTo(width / 2, height / 2, width / 2 - radius, height / 2, radius);
+        ctx.lineTo(-width / 2 + radius, height / 2);
+        ctx.arcTo(-width / 2, height / 2, -width / 2, height / 2 - radius, radius);
+        ctx.lineTo(-width / 2, -height / 2 + radius);
+        ctx.arcTo(-width / 2, -height / 2, -width / 2 + radius, -height / 2, radius);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
@@ -1321,15 +1106,26 @@
         ctx.fillStyle = "#718096";
         ctx.strokeStyle = "#2D3748";
         ctx.lineWidth = 1.5;
-        // Simplified shoe profile
         ctx.beginPath();
+        // Simplified shoe profile path
         ctx.moveTo(-width * 0.45, -height * 0.4); // Back top
         ctx.lineTo(width * 0.3, -height * 0.45); // Top front slope
-        ctx.bezierCurveTo(width * 0.5, -height * 0.4, width * 0.5, height * 0.4, width * 0.45, height * 0.4); // Toe curve
+        ctx.quadraticCurveTo(width * 0.5, -height * 0.3, width * 0.45, height * 0.4); // Toe curve
         ctx.lineTo(-width * 0.3, height * 0.45); // Bottom sole
-        ctx.quadraticCurveTo(-width * 0.5, height * 0.5, -width * 0.45, -height * 0.4); // Heel curve
+        ctx.quadraticCurveTo(-width * 0.5, height * 0.4, -width * 0.45, -height * 0.4); // Heel curve
         ctx.closePath();
         ctx.fill();
+        ctx.stroke();
+        // Laces (simple lines)
+        ctx.strokeStyle = "#E2E8F0";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, -height * 0.2);
+        ctx.lineTo(width * 0.2, -height * 0.25);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(width * 0.2, -height * 0.05);
+        ctx.moveTo(0, height * 0.2);
+        ctx.lineTo(width * 0.2, height * 0.15);
         ctx.stroke();
         ctx.restore();
       }
@@ -1339,43 +1135,38 @@
         const shapeDef = shapeTypes.find((s) => s.label === "wineGlass");
         const width = shapeDef ? shapeDef.width : 25;
         const height = shapeDef ? shapeDef.height : 45;
-        const bowlRadius = width * 0.7;
-        const bowlHeight = height * 0.5;
-        const stemHeight = height * 0.3;
-        const baseWidth = width * 0.9;
+        const bowlRadius = width * 0.8; // Wider bowl
+        const stemHeight = height * 0.4;
+        const baseWidth = width * 0.8;
+
         ctx.save();
         ctx.translate(pos.x, pos.y);
         ctx.rotate(angle);
         ctx.strokeStyle = "#A0AEC0";
         ctx.lineWidth = 1.5;
-        ctx.fillStyle = "#EBF8FF"; // Light blue fill
+        ctx.fillStyle = "#EBF8FF"; // Very light blue fill
 
-        // Bowl (simplified U shape)
-        const bowlTopY = -height / 2;
-        const bowlBottomY = bowlTopY + bowlHeight;
+        // Bowl
         ctx.beginPath();
-        ctx.moveTo(-bowlRadius / 2, bowlTopY);
-        ctx.quadraticCurveTo(0, bowlTopY - bowlRadius * 0.2, bowlRadius / 2, bowlTopY); // Slight curve at top
-        ctx.lineTo(bowlRadius * 0.4, bowlBottomY);
-        ctx.quadraticCurveTo(0, bowlBottomY + bowlRadius * 0.1, -bowlRadius * 0.4, bowlBottomY);
+        ctx.arc(0, -height / 2 + bowlRadius * 0.6, bowlRadius * 0.6, Math.PI * 0.1, Math.PI * 0.9, true); // Open top slightly wider
+        ctx.lineTo(0, height / 2 - stemHeight - baseWidth * 0.1); // Point towards stem top
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
 
         // Stem
-        const stemTopY = bowlBottomY;
-        const stemBottomY = stemTopY + stemHeight;
         ctx.beginPath();
-        ctx.moveTo(0, stemTopY);
-        ctx.lineTo(0, stemBottomY);
+        ctx.moveTo(0, height / 2 - stemHeight);
+        ctx.lineTo(0, height / 2 - baseWidth * 0.1);
         ctx.stroke();
 
         // Base
         ctx.beginPath();
-        ctx.ellipse(0, stemBottomY, baseWidth / 2, baseWidth * 0.15, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, height / 2 - baseWidth * 0.1, baseWidth / 2, baseWidth * 0.1, 0, 0, Math.PI * 2);
         ctx.fillStyle = "#A0AEC0";
         ctx.fill();
-        ctx.stroke();
+        ctx.stroke(); // Solid base
+
         ctx.restore();
       }
       function drawBook(ctx, body) {
@@ -1384,26 +1175,37 @@
         const shapeDef = shapeTypes.find((s) => s.label === "book");
         const width = shapeDef ? shapeDef.width : 30;
         const height = shapeDef ? shapeDef.height : 40;
-        const spineThickness = width * 0.15;
+        const coverThickness = width * 0.1;
         ctx.save();
         ctx.translate(pos.x, pos.y);
         ctx.rotate(angle);
-        // Main block (pages)
-        ctx.fillStyle = "#FFFAF0";
-        ctx.strokeStyle = "#A0AEC0";
+        // Back cover
+        ctx.fillStyle = "#68D391";
+        ctx.strokeStyle = "#38A169";
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.rect(-width / 2 + spineThickness / 2, -height / 2, width - spineThickness, height);
+        ctx.rect(-width / 2, -height / 2, width, height);
         ctx.fill();
         ctx.stroke();
-        // Cover (spine + front edge)
-        ctx.fillStyle = shapeDef ? shapeDef.color : "#9ae6b4";
-        ctx.strokeStyle = "#38A169";
-        ctx.lineWidth = 1.5;
+        // Spine
+        ctx.fillStyle = "#48BB78";
         ctx.beginPath();
-        ctx.rect(-width / 2 - spineThickness / 2, -height / 2, spineThickness, height); // Spine
-        ctx.rect(width / 2 - spineThickness / 2, -height / 2, spineThickness / 2, height); // Front cover edge visible
+        ctx.rect(-width / 2 - coverThickness / 2, -height / 2, coverThickness, height);
         ctx.fill();
+        ctx.stroke();
+        // Front Cover Edge
+        ctx.beginPath();
+        ctx.moveTo(width / 2, -height / 2);
+        ctx.lineTo(width / 2, height / 2);
+        ctx.stroke();
+        // Page lines (simple)
+        ctx.strokeStyle = "#C6F6D5";
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        for (let y = -height / 2 + 5; y < height / 2; y += 4) {
+          ctx.moveTo(-width / 2 + coverThickness, y);
+          ctx.lineTo(width / 2 - 2, y);
+        }
         ctx.stroke();
         ctx.restore();
       }
@@ -1412,51 +1214,49 @@
         const angle = body.angle;
         const shapeDef = shapeTypes.find((s) => s.label === "pizza");
         const radius = shapeDef ? shapeDef.radius : 25; // Use radius from polygon physics body
-        const tipAngle = Math.PI / 5; // Angle for the slice tip - slightly wider
+        const tipAngle = Math.PI / 6; // Angle for the slice tip
+
         ctx.save();
         ctx.translate(pos.x, pos.y);
         ctx.rotate(angle);
-        // Base Crust
+        // Crust
         ctx.fillStyle = "#FBD38D";
         ctx.strokeStyle = "#ED8936";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(0, 0);
         ctx.arc(0, 0, radius, -tipAngle, tipAngle);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        // Cheese/Sauce Layer (slightly smaller radius)
+        // Cheese/Sauce
         ctx.fillStyle = "#FED7D7";
         ctx.strokeStyle = "#F56565";
         ctx.lineWidth = 1;
-        const sauceRadius = radius * 0.85;
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.arc(0, 0, sauceRadius, -tipAngle, tipAngle);
+        ctx.moveTo(0, 0); // Tip
+        ctx.arc(0, 0, radius * 0.85, -tipAngle, tipAngle); // Inner arc
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        // Pepperoni
+        // Pepperoni (optional circles)
         ctx.fillStyle = "#E53E3E";
-        const pepRadius = radius * 0.1;
         ctx.beginPath();
-        ctx.arc(sauceRadius * 0.6, 0, pepRadius, 0, Math.PI * 2);
+        ctx.arc(radius * 0.5 * Math.cos(0), radius * 0.5 * Math.sin(0), radius * 0.1, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
         ctx.arc(
-          sauceRadius * 0.7 * Math.cos(tipAngle * 0.6),
-          sauceRadius * 0.7 * Math.sin(tipAngle * 0.6),
-          pepRadius * 0.8,
+          radius * 0.6 * Math.cos(tipAngle * 0.5),
+          radius * 0.6 * Math.sin(tipAngle * 0.5),
+          radius * 0.08,
           0,
           Math.PI * 2
         );
         ctx.fill();
         ctx.beginPath();
         ctx.arc(
-          sauceRadius * 0.7 * Math.cos(-tipAngle * 0.6),
-          sauceRadius * 0.7 * Math.sin(-tipAngle * 0.6),
-          pepRadius * 0.8,
+          radius * 0.6 * Math.cos(-tipAngle * 0.5),
+          radius * 0.6 * Math.sin(-tipAngle * 0.5),
+          radius * 0.08,
           0,
           Math.PI * 2
         );
@@ -1469,6 +1269,7 @@
         const shapeDef = shapeTypes.find((s) => s.label === "donut");
         const outerRadius = shapeDef ? shapeDef.radius : 20;
         const innerRadius = outerRadius * 0.4;
+
         ctx.save();
         ctx.translate(pos.x, pos.y);
         ctx.rotate(angle);
@@ -1482,111 +1283,28 @@
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        // Icing (optional)
+        // Icing (optional wavy)
         ctx.fillStyle = "#FBB6CE"; // Pink icing
         ctx.beginPath();
-        ctx.arc(0, 0, outerRadius * 0.9, 0, Math.PI * 2, false);
-        ctx.arc(0, 0, innerRadius * 1.1, 0, Math.PI * 2, true); // Slightly larger inner radius for icing hole
+        const waves = 12;
+        for (let i = 0; i < waves; i++) {
+          const angle1 = (i / waves) * Math.PI * 2;
+          const angle2 = ((i + 0.5) / waves) * Math.PI * 2;
+          const angle3 = ((i + 1) / waves) * Math.PI * 2;
+          const r1 = outerRadius * 0.9;
+          const r2 = outerRadius * 0.7;
+          if (i === 0) ctx.moveTo(r1 * Math.cos(angle1), r1 * Math.sin(angle1));
+          else
+            ctx.quadraticCurveTo(
+              r2 * Math.cos(angle2),
+              r2 * Math.sin(angle2),
+              r1 * Math.cos(angle3),
+              r1 * Math.sin(angle3)
+            );
+        }
+        ctx.arc(0, 0, innerRadius, 0, Math.PI * 2, true); // Cut out inner hole
         ctx.closePath();
         ctx.fill();
-        ctx.restore();
-      }
-
-      // --- NEW Drawing Functions for Generics & Letters ---
-      function drawPlus(ctx, body) {
-        const pos = body.position;
-        const angle = body.angle;
-        const shapeH = shapeTypes.find((s) => s.label === "plus_h");
-        const shapeV = shapeTypes.find((s) => s.label === "plus_v");
-        const width = shapeH ? shapeH.width : 40;
-        const height = shapeV ? shapeV.height : 40;
-        const thick = shapeH ? shapeH.height : 10;
-        ctx.save();
-        ctx.translate(pos.x, pos.y);
-        ctx.rotate(angle);
-        ctx.fillStyle = shapeH ? shapeH.color : "#667eea";
-        ctx.strokeStyle = "#4C51BF";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        // Draw cross shape centered at 0,0
-        ctx.rect(-width / 2, -thick / 2, width, thick); // Horizontal bar
-        ctx.rect(-thick / 2, -height / 2, thick, height); // Vertical bar
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      function drawTShape(ctx, body) {
-        const pos = body.position;
-        const angle = body.angle;
-        const shapeH = shapeTypes.find((s) => s.label === "tshape_h");
-        const shapeV = shapeTypes.find((s) => s.label === "tshape_v");
-        const topW = shapeH ? shapeH.width : 40;
-        const stemH = shapeV ? shapeV.height : 30;
-        const thick = shapeH ? shapeH.height : 10;
-        const stemW = shapeV ? shapeV.width : 10;
-        ctx.save();
-        ctx.translate(pos.x, pos.y);
-        ctx.rotate(angle);
-        ctx.fillStyle = shapeH ? shapeH.color : "#ed64a6";
-        ctx.strokeStyle = "#B83280";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        // Draw T shape (adjust positions based on composite structure)
-        const topY = -stemH / 2 + thick / 2;
-        const stemY = thick / 2;
-        ctx.rect(-topW / 2, topY - thick / 2, topW, thick); // Top bar
-        ctx.rect(-stemW / 2, stemY - thick / 2, stemW, stemH); // Stem (relative to center of composite)
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      function drawArrow(ctx, body) {
-        const pos = body.position;
-        const angle = body.angle;
-        const shaftData = shapeTypes.find((s) => s.label === "arrow_shaft");
-        const headData = shapeTypes.find((s) => s.label === "arrow_head");
-        const shaftW = shaftData ? shaftData.width : 30;
-        const shaftH = shaftData ? shaftData.height : 10;
-        const headR = headData ? headData.radius : 10;
-        ctx.save();
-        ctx.translate(pos.x, pos.y);
-        ctx.rotate(angle);
-        ctx.fillStyle = shaftData ? shaftData.color : "#a0aec0";
-        ctx.strokeStyle = "#4A5568";
-        ctx.lineWidth = 1;
-        // Draw arrow (adjust positions based on composite structure)
-        const shaftStartX = -headR / 2 - shaftW / 2; // Center the whole arrow approx
-        const headCenterX = shaftStartX + shaftW + headR * 0.6; // Position head tip correctly
-
-        ctx.beginPath();
-        // Shaft
-        ctx.rect(shaftStartX, -shaftH / 2, shaftW, shaftH);
-        // Head (triangle)
-        ctx.moveTo(headCenterX - headR, -headR); // Top back point
-        ctx.lineTo(headCenterX + headR * 0.5, 0); // Tip
-        ctx.lineTo(headCenterX - headR, headR); // Bottom back point
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      function drawLetter(ctx, body, letter, color) {
-        const pos = body.position;
-        const angle = body.angle;
-        ctx.save();
-        ctx.translate(pos.x, pos.y);
-        ctx.rotate(angle);
-        ctx.font = "bold 30px Inter, sans-serif"; // Consistent font
-        ctx.fillStyle = color;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(letter, 0, 2); // Small Y offset helps center visually
-        ctx.strokeStyle = "rgba(0,0,0,0.5)";
-        ctx.lineWidth = 0.5;
-        ctx.strokeText(letter, 0, 2);
         ctx.restore();
       }
 
@@ -1599,12 +1317,17 @@
         if (!waterBody) return;
 
         const waterY = waterBody.position.y - WATER_HEIGHT / 2; // Top edge of the water sensor
-        const waterColor = "rgba(99, 179, 237, 0.7)"; // Semi-transparent blue
+        const waterColor = "rgba(99, 179, 237, 0.7)"; // Slightly more opaque blue
 
         ctx.save();
         ctx.fillStyle = waterColor;
         ctx.strokeStyle = "rgba(56, 161, 243, 0.9)"; // Darker blue for wave crest
         ctx.lineWidth = 1.5;
+
+        // Draw the main water rectangle background
+        ctx.beginPath();
+        ctx.rect(0, waterY, CANVAS_WIDTH, WATER_HEIGHT + GROUND_HEIGHT); // Extend down to cover potential gaps
+        ctx.fill();
 
         // Draw the wavy top surface
         ctx.beginPath();
@@ -1613,18 +1336,15 @@
           const y = waterY + Math.sin(x * waveFrequency + waveOffset) * waveAmplitude;
           ctx.lineTo(x, y);
         }
-        // Complete the shape to fill below the wave
         ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT); // Line down to bottom right
         ctx.lineTo(0, CANVAS_HEIGHT); // Line to bottom left
         ctx.closePath();
-        ctx.fill();
-        // Stroke only the top wave line for definition
-        ctx.beginPath();
-        ctx.moveTo(0, waterY + Math.sin(waveOffset) * waveAmplitude);
-        for (let x = 0; x < CANVAS_WIDTH; x += 5) {
-          const y = waterY + Math.sin(x * waveFrequency + waveOffset) * waveAmplitude;
-          ctx.lineTo(x, y);
-        }
+        // Clip subsequent drawing to this path (optional, if needed)
+        // ctx.clip();
+
+        // Fill the wavy area (redundant if background rect is drawn, but ensures coverage)
+        // ctx.fill();
+        // Stroke the top wave line
         ctx.stroke();
 
         ctx.restore();
@@ -1635,206 +1355,120 @@
 
       // --- Event Listeners Setup ---
       function setupEventListeners() {
-        // Drag/Drop listeners
+        // Drag/Drop, Start/Restart, Collisions... (previous code)
         canvas.addEventListener("dragover", (e) => {
-          e.preventDefault(); // Necessary to allow drop
-          e.dataTransfer.dropEffect = "copy";
+          e.preventDefault();
         });
-        canvas.addEventListener("dragleave", (e) => {
-          /* Optional: Visual feedback */
-        });
+        canvas.addEventListener("dragleave", (e) => {});
         canvas.addEventListener("drop", (e) => {
           e.preventDefault();
           if (isDraggingFromBin && currentDraggingShape && gameState === "PLAYING") {
             const canvasRect = canvas.getBoundingClientRect();
             const dropX = e.clientX - canvasRect.left;
-            const dropY = e.clientY - canvasRect.top; // Check Y drop position too
-
-            // Prevent dropping directly into water or below canvas
-            if (dropY < CANVAS_HEIGHT - GROUND_HEIGHT - WATER_HEIGHT && dropY > 0) {
-              // Use the shape data that was dragged
-              placeShape(dropX, SHAPE_SPAWN_Y, currentDraggingShape);
-            } else {
-              // Dropped outside valid area, reset bin if needed
-              if (!shapeBin.querySelector(".bin-shape")) {
-                populateShapeBin();
-              }
-            }
+            placeShape(dropX, SHAPE_SPAWN_Y, currentDraggingShape);
           }
           isDraggingFromBin = false;
           currentDraggingShape = null;
         });
-        // Cleanup if drag ends outside canvas
         document.addEventListener("dragend", (e) => {
           if (isDraggingFromBin) {
-            // Drag ended, possibly outside the canvas. Reset bin if it hasn't been populated by a successful drop.
-            // Use a small delay to ensure drop event fires first if it occurs.
-            setTimeout(() => {
-              if (!shapeBin.querySelector(".bin-shape") && canPlaceShape) {
-                populateShapeBin();
-              }
-              isDraggingFromBin = false;
-              currentDraggingShape = null;
-            }, 50);
+            if (!shapeBin.querySelector(".bin-shape")) {
+              populateShapeBin();
+            }
+            isDraggingFromBin = false;
+            currentDraggingShape = null;
           }
         });
-
-        // Start/Restart Listener
         messageOverlay.addEventListener("click", () => {
-          startAudioContext(); // Ensure audio context is running
+          startAudioContext();
           if (gameState === "PRE_START" || gameState === "POST_GAME") {
             resetGameVariables();
             startGame();
           }
         });
-
-        // Matter.js Collision Events
         Events.on(engine, "collisionStart", (event) => {
           if (gameState !== "PLAYING") return;
           const pairs = event.pairs;
           let collisionMagnitude = 0;
-          let fellInWater = false;
           pairs.forEach((pair) => {
             const { bodyA, bodyB } = pair;
-            const labelA = bodyA.label || "";
-            const labelB = bodyB.label || "";
-
-            // Check for water collision
-            let fallingBody = null;
-            if (labelA === "water" && activeBodies.includes(bodyB)) fallingBody = bodyB;
-            else if (labelB === "water" && activeBodies.includes(bodyA)) fallingBody = bodyA;
-
-            if (fallingBody && !fellInWater) {
-              // Handle water entry once per event cycle if multiple shapes fall
+            let fallingBody = null,
+              bananaBody = null,
+              playerBody = null;
+            const bodyALabel = bodyA.label || "";
+            const bodyBLabel = bodyB.label || "";
+            if (bodyALabel === "water" && activeBodies.includes(bodyB)) fallingBody = bodyB;
+            else if (bodyBLabel === "water" && activeBodies.includes(bodyA)) fallingBody = bodyA;
+            else if (bodyALabel === "banana" && activeBodies.includes(bodyB)) {
+              bananaBody = bodyA;
+              playerBody = bodyB;
+            } else if (bodyBLabel === "banana" && activeBodies.includes(bodyA)) {
+              bananaBody = bodyB;
+              playerBody = bodyA;
+            }
+            if (fallingBody) {
               waterSound.triggerAttackRelease("4n");
               World.remove(world, fallingBody);
               activeBodies = activeBodies.filter((b) => b.id !== fallingBody.id);
-              fellInWater = true; // Avoid multiple water sounds at once
-              // Optional: Game Over if last shape falls?
-              // if (activeBodies.length === 0 && timeLeft > 0) { gameOver("Lost all shapes!"); }
+              if (activeBodies.length === 0 && timeLeft > 0) {
+                /* Optional: gameOver("Lost all shapes!"); */
+              }
             }
-
-            // Check for banana collision
-            let bananaBody = null;
-            if (labelA === "banana" && activeBodies.includes(bodyB)) bananaBody = bodyA;
-            else if (labelB === "banana" && activeBodies.includes(bodyA)) bananaBody = bodyB;
-
-            if (bananaBody && bananaBodies.includes(bananaBody)) {
+            if (bananaBody && playerBody && bananaBodies.includes(bananaBody)) {
               bananaSound.triggerAttackRelease("C6", "16n", Tone.now());
               score += BANANA_SCORE;
               updateScoreDisplay();
-              World.remove(world, bananaBody); // Remove collected banana
+              World.remove(world, bananaBody);
               bananaBodies = bananaBodies.filter((b) => b.id !== bananaBody.id);
             }
-
-            // Calculate collision magnitude for sound effect
             const isActiveA = activeBodies.includes(bodyA);
             const isActiveB = activeBodies.includes(bodyB);
             const isStaticA = bodyA.isStatic;
             const isStaticB = bodyB.isStatic;
-            // Check collisions between two active bodies, or an active body and a static platform/ground (but not water sensor)
             if (
               (isActiveA && isActiveB) ||
-              (isActiveA && isStaticB && labelB !== "water" && labelB !== "banana") ||
-              (isActiveB && isStaticA && labelA !== "water" && labelA !== "banana")
+              (isActiveA && isStaticB && bodyBLabel !== "water") ||
+              (isActiveB && isStaticA && bodyALabel !== "water")
             ) {
               const relVel = Vector.magnitude(Vector.sub(bodyA.velocity, bodyB.velocity));
               collisionMagnitude = Math.max(collisionMagnitude, relVel);
             }
           });
-
-          // Play collision sound if magnitude is high enough
           if (collisionMagnitude > COLLISION_SOUND_THRESHOLD) {
-            const velocity = Math.min(1, collisionMagnitude / 10); // Normalize velocity impact
-            const note = Tone.Frequency(60 + velocity * 60, "midi").toNote(); // Map velocity to MIDI note range
-            collisionSynth.triggerAttackRelease(note, "16n", Tone.now(), velocity * 0.8); // Play sound
+            const velocity = Math.min(1, collisionMagnitude / 10);
+            const note = Tone.Frequency(60 + velocity * 60, "midi").toNote();
+            collisionSynth.triggerAttackRelease(note, "16n", Tone.now(), velocity * 0.8);
           }
         });
 
-        // Custom Rendering Hook (after default render)
+        // Custom Rendering Hook
         Events.on(render, "afterRender", (event) => {
           const ctx = render.context;
-          // Draw animated water first (as a background element)
+          // **Draw animated water first (background element)**
           drawAnimatedWater(ctx);
 
-          // Draw custom shapes and bananas
+          // Draw other bodies
           const bodies = Composite.allBodies(world);
           ctx.save();
           bodies.forEach((body) => {
             const label = body.label || "";
-
-            // Draw active custom shapes
+            // Draw active custom shapes on top of default renders (if any visible) and water
             if (activeBodies.includes(body)) {
-              switch (label) {
-                case "ladder":
-                  drawLadder(ctx, body);
-                  break;
-                case "mug":
-                  drawMug(ctx, body);
-                  break;
-                case "star":
-                  drawStar(ctx, body);
-                  break;
-                case "gear":
-                  drawGear(ctx, body);
-                  break;
-                case "lshape":
-                  drawLShape(ctx, body);
-                  break;
-                case "block":
-                  drawConcreteBlock(ctx, body);
-                  break;
-                case "bananaShape":
-                  drawBananaShape(ctx, body);
-                  break;
-                case "shoe":
-                  drawShoe(ctx, body);
-                  break;
-                case "wineGlass":
-                  drawWineGlass(ctx, body);
-                  break;
-                case "book":
-                  drawBook(ctx, body);
-                  break;
-                case "pizza":
-                  drawPizzaSlice(ctx, body);
-                  break;
-                case "donut":
-                  drawDonut(ctx, body);
-                  break;
-                // New generic shapes
-                case "plus":
-                  drawPlus(ctx, body);
-                  break;
-                case "tshape":
-                  drawTShape(ctx, body);
-                  break;
-                case "arrow":
-                  drawArrow(ctx, body);
-                  break;
-                // Letter shapes
-                case "letterC":
-                  drawLetter(ctx, body, "C", "#f56565");
-                  break;
-                case "letterS":
-                  drawLetter(ctx, body, "S", "#48bb78");
-                  break;
-                case "letterU":
-                  drawLetter(ctx, body, "U", "#4299e1");
-                  break;
-                case "letterI":
-                  drawLetter(ctx, body, "I", "#f6e05e");
-                  break;
-                case "letterA":
-                  drawLetter(ctx, body, "A", "#f6ad55");
-                  break;
-              }
+              if (label === "ladder") drawLadder(ctx, body);
+              else if (label === "mug") drawMug(ctx, body);
+              else if (label === "star") drawStar(ctx, body);
+              else if (label === "gear") drawGear(ctx, body);
+              else if (label === "lshape") drawLShape(ctx, body);
+              else if (label === "block") drawConcreteBlock(ctx, body);
+              else if (label === "bananaShape") drawBananaShape(ctx, body);
+              else if (label === "shoe") drawShoe(ctx, body);
+              else if (label === "wineGlass") drawWineGlass(ctx, body);
+              else if (label === "book") drawBook(ctx, body);
+              else if (label === "pizza") drawPizzaSlice(ctx, body);
+              else if (label === "donut") drawDonut(ctx, body);
             }
-
-            // Draw all collectible bananas (on top of most things)
-            if (label === "banana") {
-              drawBanana(ctx, body);
-            }
+            // Draw all collectible bananas (on top of everything except messages)
+            if (label === "banana") drawBanana(ctx, body);
           });
           ctx.restore();
         });
@@ -1843,30 +1477,26 @@
         window.addEventListener("resize", handleResize);
       } // End setupEventListeners
 
-      // --- Game Loop (Height Update & Continuous Rendering) ---
+      // --- Game Loop (Height Update) ---
       function gameLoop() {
         if (gameState === "PLAYING") {
           const height = calculateMaxHeight();
-          // Only update if the height changes significantly to avoid minor fluctuations
-          if (Math.abs(height - currentMaxHeight) > 1) {
+          if (height > currentMaxHeight) {
             currentMaxHeight = height;
             updateHeightDisplay();
           }
-          // Check level goal dynamically (optional)
-          // const requiredHeight = REQUIRED_HEIGHT_PER_LEVEL_BASE + (level - 1) * REQUIRED_HEIGHT_PER_LEVEL_INCREMENT;
-          // if (currentMaxHeight >= requiredHeight) { checkLevelEnd(); } // Could end level early
         }
-        // Keep animation frame running for continuous rendering (e.g., water)
+        // Keep animation frame running even if not playing for water animation
         animationFrameId = requestAnimationFrame(gameLoop);
       }
 
       // --- Level End Check ---
       function checkLevelEnd() {
-        // (Previous level end check code - kept as is)
+        /* ... (previous level end check code) ... */
         if (gameState !== "PLAYING") return;
         const finalHeight = calculateMaxHeight();
         currentMaxHeight = Math.max(currentMaxHeight, finalHeight);
-        updateHeightDisplay(); // Update one last time
+        updateHeightDisplay();
         const requiredHeight = REQUIRED_HEIGHT_PER_LEVEL_BASE + (level - 1) * REQUIRED_HEIGHT_PER_LEVEL_INCREMENT;
         if (currentMaxHeight >= requiredHeight) {
           nextLevel();
@@ -1889,19 +1519,10 @@
       function handleResize() {
         console.log("Window resize detected.");
         updateCanvasSize(); // Update canvas dimensions
-
         // Recreate static world elements based on new size
-        // Important: Need to clear old ones first if engine/world exists
-        if (world) {
-          createLevelBoundaries(); // Recreates ground, walls, water sensor
-          // Recreate platforms and bananas based on current level
-          createLevelPlatforms(level);
-        } else {
-          console.warn("Resize called before engine initialization.");
-        }
-        // Note: Existing dynamic shapes are not repositioned automatically,
-        // resizing during active gameplay might lead to unexpected physics.
-        console.warn("Resizing during gameplay might affect physics accuracy. Active shapes not repositioned.");
+        createLevelBoundaries();
+        createLevelPlatforms(level);
+        console.warn("Resizing might affect physics accuracy. Active shapes not repositioned.");
       }
 
       // --- Start the application ---
